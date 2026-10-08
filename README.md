@@ -136,6 +136,19 @@ derived from the entries' frontmatter, keyed by slug:
 `version` and `tags` are present only when set; `tags` becomes a real JSON
 list. For agents, `name` is the slug.
 
+### Previewing locally
+
+Build into `_site/` and serve it, then open
+[localhost:8621](http://localhost:8621):
+
+```sh
+python3 scripts/build_site.py
+python3 -m http.server 8621 --directory _site
+```
+
+The publish preview is the raw content tree — no HTML index page, since
+this is what entoli clients consume.
+
 ## CI
 
 Every pull request that adds or modifies content under `data/` is validated:
