@@ -10,6 +10,12 @@ Marketplace content for entoli: skills and agents under `data/`, published
 to GitHub Pages on merge to `main`. Content is the product; `scripts/` and
 `.github/` exist to validate and publish it.
 
+Skills follow the [Agent Skills spec](https://agentskills.io/home) —
+entoli implements that spec, and this repo must too: spec-conformant
+`SKILL.md` frontmatter, `name` matching the directory, and nothing outside
+the spec's key set at the top level. Agents are an entoli content type
+modeled on the same convention.
+
 ## Commands
 
 - Validate everything: `python3 scripts/validate.py`
