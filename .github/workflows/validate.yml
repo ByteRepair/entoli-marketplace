@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "data/**"
+      - "ext/**"
       - ".github/workflows/validate.yml"
       - "scripts/**"
       - "tool/**"
@@ -66,4 +67,8 @@ jobs:
         run: ENTOLI_CHECKOUT=entoli dart tool/frontmatter_diff_test.dart
 
       - name: Validate entries (Python tier)
+        # ext/ entries are validated only here (the Dart CLI has no network
+        # access); GITHUB_TOKEN raises the API rate limit for those fetches.
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: python3 scripts/validate.py --changed /tmp/changed.txt

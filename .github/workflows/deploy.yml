@@ -5,6 +5,7 @@ on:
     branches: [master]
     paths:
       - "data/**"
+      - "ext/**"
       - ".github/workflows/deploy.yml"
       - "scripts/**"
   workflow_dispatch:
@@ -30,6 +31,10 @@ jobs:
           python-version: "3.14"
 
       - name: Build
+        # ext/ entries fetch their remote content at build time;
+        # GITHUB_TOKEN raises the API rate limit for those fetches.
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: python scripts/build_site.py
 
       - name: Upload artifact

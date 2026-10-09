@@ -8,6 +8,13 @@
   top-level folder
 - generates _site/skills/index.json and _site/agents/index.json from each
   entry's SKILL.md / PROMPT.md frontmatter, keyed by slug
+- resolves ext/<section>/<slug>/index.toml manifests (see fetch_remote.py):
+  remote entries join the section index.json — name and description from
+  the fetched frontmatter, authors from the source repo's contributors,
+  version from the frontmatter, tags = "external", the manifest's tags,
+  then the frontmatter's own — and their repository/ref/path location data
+  lands in _site/ext/<section>/index.json. Remote content is not mirrored:
+  clients follow the location data.
 
 The build validates everything first (same rules as CI) and refuses to
 produce output for invalid data.
@@ -22,9 +29,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import fetch_remote
 import validate
 
 SITE = ROOT / "_site"
+EXTERNAL_TAG = "external"
 
 
 def entry_meta(section: str, slug: str) -> dict:
@@ -43,6 +52,38 @@ def entry_meta(section: str, slug: str) -> dict:
     return meta
 
 
+def ext_meta(entry, result) -> dict:
+    """One remote entry's index record, in the same shape as a local one."""
+    scalars, metadata, _ = validate.parse_frontmatter(
+        entry.files[validate.ENTRY_KINDS[entry.section]].decode(
+            "utf-8", errors="replace"
+        )
+    )
+    tags = [
+        EXTERNAL_TAG,
+        *validate.split_tags(result.tags or ""),
+        *validate.split_tags(metadata.get("tags", "")),
+    ]
+    meta = {
+        "name": scalars.get("name") or entry.key,
+        "description": scalars.get("description", "")[: validate.DESCRIPTION_MAX],
+        "author": result.authors or "",
+    }
+    if version := metadata.get("version"):
+        meta["version"] = version
+    if tags:
+        meta["tags"] = list(dict.fromkeys(tags))
+    return meta
+
+
+def ext_location(result) -> dict:
+    """The location data one manifest publishes to _site/ext/<section>/."""
+    location = {"repo": result.repo, "path": result.path}
+    if result.ref:
+        location["ref"] = result.ref
+    return location
+
+
 def package_skill(src: Path, dst: Path) -> None:
     """Zip [src] (a skill directory) into [dst] as a `.skill`.
 
@@ -58,33 +99,63 @@ def package_skill(src: Path, dst: Path) -> None:
 
 def build() -> int:
     errors = []
+    warnings: list[str] = []
     meta_all = {}
+    local_slugs: dict[str, list[str]] = {}
+    locations: dict[str, dict[str, dict]] = {}
+
     for section in validate.ENTRY_KINDS:
         meta_all[section] = {}
-        for slug in validate.discover_slugs(section):
+        local_slugs[section] = []
+        for slug in validate.discover_slugs(section, validate.DATA_ROOT):
             entry_errors = validate.validate_entry(section, slug)
             if entry_errors:
                 errors.extend(entry_errors)
                 continue
             meta_all[section][slug] = entry_meta(section, slug)
+            local_slugs[section].append(slug)
+
+        locations[section] = {}
+        for slug in validate.discover_slugs(section, validate.EXT_ROOT):
+            result, ext_errors = fetch_remote.fetch_result(
+                validate.EXT_ROOT, section, slug
+            )
+            if ext_errors:
+                errors.extend(ext_errors)
+            if result is None:
+                continue
+            warnings.extend(result.exclusion_warnings(f"ext/{section}/{slug}"))
+            for entry in result.entries:
+                meta_all[section][entry.key] = ext_meta(entry, result)
+            locations[section][slug] = ext_location(result)
 
     if errors:
         print(f"build failed: {len(errors)} validation error(s):")
         for error in errors:
             print(f"  {error}")
         return 1
+    if warnings:
+        print("warnings (not fatal):")
+        for warning in warnings:
+            print(f"  {warning}")
 
     if SITE.exists():
         shutil.rmtree(SITE)
     for section in validate.ENTRY_KINDS:
-        (SITE / section).mkdir(parents=True)
-        for slug in meta_all[section]:
+        for slug in local_slugs[section]:
             src = validate.DATA_ROOT / section / slug
             shutil.copytree(src, SITE / section / slug)
             if section == "skills":
                 package_skill(src, SITE / section / f"{slug}.skill")
         (SITE / section / "index.json").write_text(
             json.dumps(meta_all[section], indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+
+    for section in validate.ENTRY_KINDS:
+        (SITE / "ext" / section).mkdir(parents=True)
+        (SITE / "ext" / section / "index.json").write_text(
+            json.dumps(locations[section], indent=2, ensure_ascii=False) + "\n",
             encoding="utf-8",
         )
 

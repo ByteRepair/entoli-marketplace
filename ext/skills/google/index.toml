@@ -1,0 +1,3 @@
+repo = "google/skills"
+ref = "main"
+path = "skills"
