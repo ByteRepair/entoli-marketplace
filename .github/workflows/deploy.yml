@@ -30,6 +30,9 @@ jobs:
         with:
           python-version: "3.14"
 
+      - name: Install PyYAML (the frontmatter parser needs it)
+        run: pip install --disable-pip-version-check pyyaml
+
       - name: Build
         # ext/ entries fetch their remote content at build time;
         # GITHUB_TOKEN raises the API rate limit for those fetches.

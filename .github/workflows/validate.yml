@@ -49,6 +49,12 @@ jobs:
         name: Prepare entoli package
         run: dart pub get --directory entoli
 
+      # The runner's system Python has PyYAML; install it explicitly so the
+      # Python tier never depends on the image's package set. (The fixture
+      # tier and this script import yaml at module load.)
+      - name: Install PyYAML
+        run: python3 -m pip install --disable-pip-version-check pyyaml || pip install --disable-pip-version-check pyyaml
+
       - name: Collect touched entries
         run: |
           git fetch origin "${{ github.base_ref }}" "${{ github.event.pull_request.head.sha }}"
