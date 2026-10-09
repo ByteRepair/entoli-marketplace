@@ -25,7 +25,6 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import validate
 
 SITE = ROOT / "_site"
-TAGS_DELIM = ","
 
 
 def entry_meta(section: str, slug: str) -> dict:
@@ -40,7 +39,7 @@ def entry_meta(section: str, slug: str) -> dict:
     if version := metadata.get("version"):
         meta["version"] = version
     if tags := metadata.get("tags"):
-        meta["tags"] = [t.strip() for t in tags.split(TAGS_DELIM) if t.strip()]
+        meta["tags"] = validate.split_tags(tags)
     return meta
 
 
@@ -63,7 +62,7 @@ def build() -> int:
     for section in validate.ENTRY_KINDS:
         meta_all[section] = {}
         for slug in validate.discover_slugs(section):
-            entry_errors, _ = validate.validate_entry(section, slug)
+            entry_errors = validate.validate_entry(section, slug)
             if entry_errors:
                 errors.extend(entry_errors)
                 continue
@@ -81,11 +80,9 @@ def build() -> int:
         (SITE / section).mkdir(parents=True)
         for slug in meta_all[section]:
             src = validate.DATA_ROOT / section / slug
-            dst = SITE / section / slug
-            if src.is_dir():
-                shutil.copytree(src, dst)
-                if section == "skills":
-                    package_skill(src, SITE / section / f"{slug}.skill")
+            shutil.copytree(src, SITE / section / slug)
+            if section == "skills":
+                package_skill(src, SITE / section / f"{slug}.skill")
         (SITE / section / "index.json").write_text(
             json.dumps(meta_all[section], indent=2, ensure_ascii=False) + "\n",
             encoding="utf-8",

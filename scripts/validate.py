@@ -1,16 +1,25 @@
 #!/usr/bin/env python3
-"""Validate marketplace entries under data/.
+"""Quick standalone entry checks under data/.
 
 Usage:
   scripts/validate.py                 validate every entry in data/
   scripts/validate.py --changed FILE  validate only entries touched by a diff
   scripts/validate.py --entry data/skills/foo   validate only that entry
+  scripts/validate.py --data-root DIR           validate a different tree
 
 --changed expects `git diff --name-status -M` output (plain names from
 `--name-only` are also accepted). An entry is validated when any touched
 path adds or modifies content in it; deletions alone only validate the
 entry if a directory still remains (full removal is allowed, partial
 removal fails the missing-file checks).
+
+Checks are file presence, slug shape, UTF-8, PNG magic, and a Python
+mirror of entoli's frontmatter parser and Agent Skills spec rules — same
+two tiers: strict YAML (PyYAML; system-installed locally and on CI
+runners) then the legacy regex fallback. CI's source of truth is entoli's
+own Dart CLI (tool/validate_marketplace.dart in the entoli repo), which
+tool/frontmatter_diff_test.dart pins both tiers to agree with; this
+script is the quick local pass with no Dart toolchain required.
 """
 
 import argparse
@@ -50,33 +59,101 @@ ENTRY_FILES = {
 }
 AGENT_ALLOWED = {"README.md", "PROMPT.md", "profile.png"}
 
-# Entoli's frontmatter parser (lib/domain/frontmatter.dart) verbatim: it is
-# a strict regex subset of YAML, so validating against full YAML would pass
-# files Entoli reads differently.
+# Entoli's frontmatter parser (lib/domain/frontmatter.dart) as two tiers:
+# strict YAML first (the `yaml` package there; PyYAML here, which entoli's
+# grammar matches for the shapes entries write), then the legacy regex
+# subset as fallback for content that is not valid YAML (unquoted ": " in
+# values). Ports mirror entoli tier for tier, and
+# tool/frontmatter_diff_test.dart keeps them in lockstep.
+import yaml  # PyYAML; system-installed locally and on GitHub runners
+
 _SCALAR_RE = re.compile(r"^([A-Za-z0-9_.-]+):[ \t]*(.*)$")
 _INDENTED_SCALAR_RE = re.compile(r"^[ \t]+([A-Za-z0-9_.-]+):[ \t]*(.*)$")
 
 
-def parse_frontmatter(source: str) -> tuple[dict[str, str], dict[str, str], bool]:
-    """Port of Entoli's Frontmatter.parse.
+def _scalar_string(value) -> str:
+    """Mirror entoli's _scalarString: resolve YAML scalars the way the yaml
+    package delivers them (quotes gone, booleans/numbers at YAML spelling)."""
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, list):
+        return "[" + ", ".join(_scalar_string(v) for v in value) + "]"
+    if isinstance(value, dict):
+        return (
+            "{" + ", ".join(f"{k}: {_scalar_string(v)}" for k, v in value.items()) + "}"
+        )
+    return str(value)
 
-    Returns (scalars, metadata, has_block): the top-level keys, the indented
-    `metadata:` map, and whether a frontmatter block was found. Values are
-    exactly what Entoli reads — entries the port drops (wrong indent, nested
-    deeper, interrupted block) are dropped for Entoli too.
+
+def _collect_yaml_map(yaml_map: dict) -> tuple[dict[str, str], dict[str, str]]:
+    """The scalars and metadata map a parsed YAML mapping yields, mirroring
+    entoli's map walk: nested non-metadata blocks dropped, metadata values
+    stringified (nested maps inside metadata dropped)."""
+    scalars: dict[str, str] = {}
+    metadata: dict[str, str] = {}
+    for key, value in yaml_map.items():
+        if not isinstance(key, str):
+            continue
+        if key == "metadata" and isinstance(value, dict):
+            for mkey, mvalue in value.items():
+                if isinstance(mkey, str) and not isinstance(mvalue, dict):
+                    metadata[mkey] = _scalar_string(mvalue)
+            continue
+        if value is None or isinstance(value, (dict, list)):
+            continue
+        scalars[key] = _scalar_string(value)
+    return scalars, metadata
+
+
+def parse_frontmatter(source: str) -> tuple[dict[str, str], dict[str, str], bool]:
+    """Port of Entoli's Frontmatter.parse (YAML first, legacy fallback).
+
+    Returns (scalars, metadata, has_block): the top-level keys, the `metadata:`
+    map, and whether a frontmatter block was found. Values are exactly what
+    Entoli reads — shapes the strict tier refuses and the legacy tier drops
+    are dropped for Entoli too.
     """
     text = source.replace("\r\n", "\n")
-    if not text.startswith("---\n"):
+    if not text.startswith("---\n") and text != "---":
         return {}, {}, False
     close = text.find("\n---", 3)
     if close < 0:
         return {}, {}, False
 
-    scalars: dict[str, str] = {}
-    metadata: dict[str, str] = {}
+    block = text[4:close]
+    lines = block.split("\n")
+
+    # Strict tier: everything the yaml grammar accepts (block scalars,
+    # comments, quoting).
+    try:
+        parsed = yaml.safe_load(block)
+    except yaml.YAMLError:
+        parsed = "not a mapping"
+    if isinstance(parsed, dict):
+        scalars, metadata = _collect_yaml_map(parsed)
+        return scalars, metadata, True
+
+    # Strict retry for tab-indented blocks: tabs are legal YAML content but
+    # not legal indentation, so the block indented with tabs the legacy
+    # parser read becomes space-indented for the strict try.
+    if "\t" in block:
+        try:
+            parsed = yaml.safe_load(block.replace(_TAB_INDENT_RE, "  "))
+        except yaml.YAMLError:
+            parsed = "not a mapping"
+        if isinstance(parsed, dict):
+            scalars, metadata = _collect_yaml_map(parsed)
+            return scalars, metadata, True
+
+    # Legacy tier: the verbatim regex subset parse of the whole block.
+    scalars, metadata = {}, {}
     in_metadata = False
     metadata_indent: int | None = None
-    for line in text[4 : close + 1].split("\n"):
+    for line in lines:
         match = _SCALAR_RE.match(line)
         if match is None:
             nested = _INDENTED_SCALAR_RE.match(line)
@@ -97,6 +174,16 @@ def parse_frontmatter(source: str) -> tuple[dict[str, str], dict[str, str], bool
             continue
         scalars[key] = _unquote(value.strip())
     return scalars, metadata, True
+
+
+_SCALAR_RE = re.compile(r"^([A-Za-z0-9_.-]+):[ \t]*(.*)$")
+_INDENTED_SCALAR_RE = re.compile(r"^[ \t]+([A-Za-z0-9_.-]+):[ \t]*(.*)$")
+_TAB_INDENT_RE = re.compile(r"^\t+", re.MULTILINE)
+
+
+def split_tags(tags: str) -> list[str]:
+    """The list a `tags:` value publishes: comma-separated, trimmed."""
+    return [t.strip() for t in tags.split(",") if t.strip()]
 
 
 def _unquote(value: str) -> str:
@@ -137,15 +224,14 @@ def _check_meta_fields(path: Path, metadata: dict[str, str]) -> list[str]:
         )
     tags = metadata.get("tags")
     if tags is not None:
-        if tags.startswith("[") and tags.endswith("]"):
+        stripped = tags.strip()
+        if stripped.startswith("[") or stripped.endswith("]"):
             errors.append(
                 f'{path}: metadata "tags" must be a comma-separated string, '
                 f"not a YAML list (got {tags!r})"
             )
         else:
-            parts = [t.strip() for t in tags.split(",") if t.strip()]
-            if not parts:
-                errors.append(f"{path}: metadata 'tags' is empty")
+            parts = split_tags(tags)
             if len(parts) != len(set(parts)):
                 errors.append(f"{path}: metadata 'tags' contains duplicates: {parts}")
     return errors
@@ -190,29 +276,21 @@ def check_entry_frontmatter(path: Path, kind: str, slug: str, text: str) -> list
             )
     else:
         for key in scalars:
-            if key not in ("description", "metadata"):
+            if key in ("description", "metadata"):
+                continue
+            if key == "name":
+                errors.append(
+                    f"{path}: an agent's name is its file name; do not set a "
+                    f"'name' frontmatter key"
+                )
+            else:
                 errors.append(
                     f'{path}: unexpected frontmatter key "{key}" (an agent '
                     f"carries only description and metadata)"
                 )
-        if "name" in scalars:
-            errors.append(
-                f"{path}: an agent's name is its file name; do not set a "
-                f"'name' frontmatter key"
-            )
 
     errors.extend(_check_meta_fields(path, metadata))
     return errors
-
-
-def check_utf8(path: Path) -> list[str]:
-    try:
-        path.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
-        return [f"{path}: not valid UTF-8"]
-    except OSError as exc:
-        return [f"{path}: cannot read: {exc}"]
-    return []
 
 
 def check_profile_png(base: Path) -> list[str]:
@@ -232,6 +310,8 @@ def check_profile_png(base: Path) -> list[str]:
 
 
 def check_agent_extras(base: Path) -> list[str]:
+    """A stray file in an agent directory is what the Dart CLI refuses, so
+    it is an error here too — never a warning (tiers must not disagree)."""
     return [
         f"{p}: file is not part of the agent schema (expected only "
         f"{', '.join(sorted(AGENT_ALLOWED))})"
@@ -261,36 +341,36 @@ def discover_slugs(section: str) -> list[str]:
     return sorted(p.name for p in root.iterdir() if p.is_dir())
 
 
-def validate_entry(section: str, slug: str) -> tuple[list[str], list[str]]:
+def validate_entry(section: str, slug: str) -> list[str]:
     base = DATA_ROOT / section / slug
     errors: list[str] = []
-    warnings: list[str] = []
 
     if not SLUG_RE.fullmatch(slug):
         errors.append(f"{base}: slug must match {SLUG_RE.pattern}")
     if not base.is_dir():
         errors.append(f"{base}: entry directory does not exist")
-        return errors, warnings
+        return errors
 
     for name in ENTRY_FILES[section]:
         path = base / name
         if not path.is_file():
             errors.append(f"{path}: missing required file")
-        elif name.endswith(".md"):
-            errors.extend(check_utf8(path))
-
-    entry_md = base / ENTRY_KINDS[section]
-    if entry_md.is_file():
-        errors.extend(
-            check_entry_frontmatter(
-                entry_md, section, slug, entry_md.read_text("utf-8")
-            )
-        )
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            errors.append(f"{path}: not valid UTF-8")
+            text = None
+        except OSError as exc:
+            errors.append(f"{path}: cannot read: {exc}")
+            text = None
+        if name == ENTRY_KINDS[section] and text is not None:
+            errors.extend(check_entry_frontmatter(path, section, slug, text))
     if section == "agents":
         errors.extend(check_profile_png(base))
-        warnings.extend(check_agent_extras(base))
+        errors.extend(check_agent_extras(base))
 
-    return errors, warnings
+    return errors
 
 
 def collect_slugs_from_diff(diff_text: str) -> dict[str, set[str]]:
@@ -332,7 +412,15 @@ def collect_slugs_from_diff(diff_text: str) -> dict[str, set[str]]:
 
 
 def main() -> int:
+    global DATA_ROOT
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--data-root",
+        type=Path,
+        default=DATA_ROOT,
+        metavar="DIR",
+        help="the tree holding <data-root>/{skills,agents} (default data/)",
+    )
     parser.add_argument(
         "--changed",
         type=Path,
@@ -347,6 +435,7 @@ def main() -> int:
         help="validate a specific entry (repeatable)",
     )
     args = parser.parse_args()
+    DATA_ROOT = args.data_root
 
     sections: dict[str, set[str]] = {}
     if args.changed:
@@ -365,19 +454,12 @@ def main() -> int:
         sections.setdefault(mapped[0], set()).add(mapped[1])
 
     errors: list[str] = []
-    warnings: list[str] = []
     checked = 0
     for section in ENTRY_KINDS:
         for slug in sorted(sections.get(section, set())):
             checked += 1
-            entry_errors, entry_warnings = validate_entry(section, slug)
-            errors.extend(entry_errors)
-            warnings.extend(entry_warnings)
+            errors.extend(validate_entry(section, slug))
 
-    if warnings:
-        print("warnings (not fatal):")
-        for warning in warnings:
-            print(f"  {warning}")
     if errors:
         print(f"validation failed with {len(errors)} error(s):")
         for error in errors:

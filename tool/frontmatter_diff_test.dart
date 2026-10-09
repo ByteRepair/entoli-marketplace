@@ -1,108 +1,235 @@
-// Differential test: entoli's Frontmatter.parse (Dart, via fm_dart.dart)
-// against the Python port in scripts/validate.py, over adversarial
-// frontmatter cases. Requires a sibling entoli checkout (../entoli).
+// The marketplace's validation is two tiers that must agree: the Dart CLI
+// in a sibling entoli checkout (tool/validate_marketplace.dart — the source
+// of truth) and the Python port (scripts/validate.py). This test builds one
+// fixture tree, drives BOTH over it, and asserts each accepts and refuses
+// what the marketplace promises, with the reason substring to match. It is
+// the check that a marketplace CI green really means entoli accepts the
+// entry, and that the quick local pass says the same thing.
+//
+// The entoli checkout is found at ../entoli, or wherever ENTOLI_CHECKOUT
+// points.
 //
 //   dart tool/frontmatter_diff_test.dart
-//
-// Exits 0 when every case agrees on scalars, metadata, and block presence;
-// prints divergences and exits 1 otherwise.
-import "dart:convert";
 import "dart:io";
 
-import "fm_dart.dart";
+final repo = Directory.current.path;
+final entoliRoot = Platform.environment["ENTOLI_CHECKOUT"] ?? "$repo/../entoli";
+final cli = "$entoliRoot/tool/validate_marketplace.dart";
 
 void main() {
-  final repo = Directory.current.path;
-  final entoliFrontmatter = File("$repo/../entoli/lib/domain/frontmatter.dart");
-  if (!entoliFrontmatter.existsSync()) {
-    stderr.writeln("no entoli checkout at ${entoliFrontmatter.path}");
+  final cliFile = File(cli);
+  if (!cliFile.existsSync()) {
+    stderr.writeln(
+        "no entoli checkout with tool/validate_marketplace.dart at $entoliRoot");
     exit(2);
   }
 
-  final cases = <String>[
-    "---\nname: foo\ndescription: bar\n---\n\nbody\n",
-    "---\nname: \"quoted\"\ndescription: 'single'\n---\nbody\n",
-    "---\nname: foo\nmetadata:\n  author: A\n  version: 1.2.0\n---\nbody\n",
-    "---\nmetadata:\n  tags: a, b\n  author: X\n---\n",
-    "---\n---\nbody\n",
-    "---\ndescription: spaced   \nname:    indented-name\n---\n",
-    "no block at all\n",
-    "---\nunclosed\n",
-    "\n---\nnot at start\n---\n",
-    "---\r\nname: crlf\r\ndescription: crlf\r\n---\r\nbody\r\n",
-    "---\nname: pre\nmetadata:\n  author: A\nother: after-block\n---\nbody\n",
-    "---\nmetadata:\n  author: A\nname: after\n---\n",
-    "---\nmetadata:\n  deeper:\n    x: 1\n  author: B\n---\n",
-    "---\nmetadata:\n    author: four-space\n---\n",
-    "---\nmetadata:\n  author: A\n    version: deeper\n---\n",
-    "---\nmetadata:\n\n  author: after-blank\n---\n",
-    "---\nmetadata: inline\n---\n",
-    "---\nname: 'sq'\ndescription: \"dq\"\nmetadata:\n  author: 'q'\n  version: \"09.9.9\"\n---\n",
-    "---\nname: a\"b\ndescription: it's\n---\n",
-    "---\nname: \"\n---\n",
-    "---\nname: \"unterminated\n---\n",
-    "---\nname: a: b\ndescription: c: d\n---\n",
-    "---\nurl: http://example.com\n---\n",
-    "---\nname: spaced  value\n---\n",
-    "---\nname: name\nname: second\n---\n",
-    "---\nname-with-dash: v\nkey.name: v\nkey_name: v\nkey123: v\n---\n",
-    "---\n NAME: upper \n---\n",
-    "---\nname: v\n\ttabbed: x\n---\n",
-    "---\nname: v\n metadata:\n   author: A\n---\n",
-    "---\nlist:\n  - item\nname: keep\n---\n",
-    "---\nmetadata:\n  author: A\n  tags: x,y,,z\n---\n",
-    "---\nmetadatas: x\n---\n",
-    "---\nmetadata2:\n  author: B\n---\n",
-    "---\nname: empty-metadata\nmetadata:\n---\n",
-    "---\nname: dup\nmetadata:\n  author: A\nmetadata:\n  author: B\n---\n",
-    "---\ndescription: line1\n  continued: indented\n---\n",
+  // (slug, section, frontmatter, expected accept, reason substring when
+  // refused). `name` in each fixture is the slug, which is the rule most
+  // cases are built to test around.
+  final cases = <(String, String, String Function(String), bool, String)>[
+    (
+      "plain-skill",
+      "skills",
+      (slug) => "---\nname: $slug\ndescription: d\nmetadata:\n  author: A\n---\n\nbody\n",
+      true,
+      ""
+    ),
+    (
+      "folded-skill",
+      "skills",
+      (slug) => "---\nname: $slug\ndescription: >-\n  folded description\n  over lines.\nmetadata:\n  author: A\n---\n",
+      true,
+      ""
+    ),
+    (
+      "literal-skill",
+      "skills",
+      (slug) => "---\nname: $slug\ndescription: |-\n  literal lines\n  stay.\nmetadata:\n  author: A\n  version: 1.0.0\n---\n",
+      true,
+      ""
+    ),
+    (
+      "comments-skill",
+      "skills",
+      (slug) => "---\nname: $slug # the name\ndescription: quoted \"value\" here # and a comment\nmetadata:\n  author: 'sq' # noted\n---\n",
+      true,
+      ""
+    ),
+    (
+      "prerelease-skill",
+      "skills",
+      (slug) => "---\nname: $slug\ndescription: d\nmetadata:\n  author: A\n  version: 2.0.0-rc.1+build\n  tags: a, b\n---\n",
+      true,
+      ""
+    ),
+    (
+      "legacy-colon-skill",
+      "skills",
+      (slug) => "---\nname: $slug\ndescription: audits the code: all of it\nmetadata:\n  author: A\n---\n",
+      true,
+      ""
+    ),
+    (
+      "no-block-skill",
+      "skills",
+      (_) => "no frontmatter here\n",
+      false,
+      "no frontmatter block"
+    ),
+    (
+      "no-name-skill",
+      "skills",
+      (slug) => "---\ndescription: d\nmetadata:\n  author: A\n---\n",
+      false,
+      "missing 'name'"
+    ),
+    (
+      "name-mismatch-skill",
+      "skills",
+      (slug) => "---\nname: other\ndescription: d\nmetadata:\n  author: A\n---\n",
+      false,
+      "does not match the folder"
+    ),
+    (
+      "unknown-key-skill",
+      "skills",
+      (slug) => "---\nname: $slug\ndescription: d\nauthor: A\n---\n",
+      false,
+      "unknown frontmatter key"
+    ),
+    (
+      "bad-semver-skill",
+      "skills",
+      (slug) => "---\nname: $slug\ndescription: d\nmetadata:\n  version: 1.0\n  author: A\n---\n",
+      false,
+      "SemVer"
+    ),
+    (
+      "list-tags-skill",
+      "skills",
+      (slug) => "---\nname: $slug\ndescription: d\nmetadata:\n  author: A\n  tags: [a, b]\n---\n",
+      false,
+      "comma-separated"
+    ),
+    (
+      "dup-tags-skill",
+      "skills",
+      (slug) => "---\nname: $slug\ndescription: d\nmetadata:\n  author: A\n  tags: a, a\n---\n",
+      false,
+      "duplicates"
+    ),
+    (
+      "no-author-skill",
+      "skills",
+      (slug) => "---\nname: $slug\ndescription: d\n---\n",
+      false,
+      "author"
+    ),
+    (
+      "metadata-last-skill",
+      "skills",
+      (slug) => "---\nname: $slug\ndescription: d\nmetadata:\n  author: A\nother: x\n---\n",
+      false,
+      "unknown frontmatter key"
+    ),
+    (
+      "plain-agent",
+      "agents",
+      (slug) => "---\ndescription: an agent for things.\nmetadata:\n  author: A\n---\n\nYou are an agent.\n",
+      true,
+      ""
+    ),
+    (
+      "named-agent",
+      "agents",
+      (slug) => "---\nname: $slug\ndescription: d\nmetadata:\n  author: A\n---\n",
+      false,
+      "file name"
+    ),
+    (
+      "no-desc-agent",
+      "agents",
+      (_) => "---\nmetadata:\n  author: A\n---\nbody",
+      false,
+      "no description"
+    ),
+    (
+      "no-author-agent",
+      "agents",
+      (slug) => "---\ndescription: d\n---\nbody",
+      false,
+      "author"
+    ),
   ];
 
-  var divergences = 0;
-  final tmp = Directory.systemTemp.createTempSync("fmtest");
-  for (final source in cases) {
-    final fm = Frontmatter.parse(source);
-    final caseFile = File("${tmp.path}/case.txt");
-    caseFile.writeAsStringSync(source);
-    final result = Process.runSync("python3", [
-      "-c",
-      "import sys, json; sys.path.insert(0, r'$repo/scripts');"
-          "import validate; s, m, b = validate.parse_frontmatter(open(sys.argv[1]).read());"
-          "print(json.dumps({'scalars': s, 'metadata': m, 'has_block': b}))",
-      caseFile.path,
-    ]);
-    if (result.exitCode != 0) {
-      divergences++;
-      stderr.writeln("python failed on ${jsonEncode(source)}:\n${result.stderr}");
-      continue;
-    }
-    final py = jsonDecode(result.stdout as String) as Map<String, dynamic>;
-    final pyScalars = (py["scalars"] as Map).cast<String, String>();
-    final pyMeta = (py["metadata"] as Map).cast<String, String>();
-    // Dart's block rule after its own CRLF normalization: --- opener AND a
-    // closing \n--- — the same thing has_block reports on the Python side.
-    final normalized = source.replaceAll("\r\n", "\n");
-    final dartHasBlock =
-        normalized.startsWith("---\n") && normalized.indexOf("\n---", 3) >= 0;
-    final same = _eq(fm.scalars, pyScalars) &&
-        _eq(fm.metadata, pyMeta) &&
-        (py["has_block"] as bool) == dartHasBlock;
-    if (!same) {
-      divergences++;
-      stderr.writeln("DIVERGENCE on: ${jsonEncode(source)}\n"
-          "  dart scalars=${fm.scalars} metadata=${fm.metadata}\n"
-          "  py   scalars=$pyScalars metadata=$pyMeta "
-          "has_block=${py["has_block"]}");
-    }
+  final tmp = Directory.systemTemp.createTempSync("fmcheck");
+  for (final (slug, section, frontmatter, _, _) in cases) {
+    final dir = Directory("${tmp.path}/$section/$slug")
+      ..createSync(recursive: true);
+    File("${dir.path}/${section == "skills" ? "SKILL.md" : "PROMPT.md"}")
+        .writeAsStringSync(frontmatter(slug));
+    File("${dir.path}/README.md").writeAsStringSync("# r\n");
+  }
+  for (final (runner, argv, name) in [
+    (
+      "dart",
+      ["tool/validate_marketplace.dart", "--data-root", tmp.path],
+      entoliRoot
+    ),
+    (
+      "python",
+      ["scripts/validate.py", "--data-root", tmp.path],
+      repo
+    ),
+  ]) {
+    validateTier(tmp, runner, argv, name, cases);
   }
   tmp.deleteSync(recursive: true);
-  if (divergences == 0) {
-    stdout.writeln("${cases.length} cases: dart and python parsers agree");
+}
+
+/// Runs one validation tier over the fixture tree and asserts its outcomes.
+void validateTier(
+  Directory tmp,
+  String runner,
+  List<String> argv,
+  String workDir,
+  List<(String, String, String Function(String), bool, String)> cases,
+) {
+  final result = Process.runSync(
+      runner == "dart" ? "dart" : "python3",
+      runner == "dart" ? argv : argv,
+      workingDirectory: workDir);
+  final out = (result.stdout as String) + (result.stderr as String);
+  // Problem lines are "  <data-root>/skills/<slug>/<file>: <message>"; an
+  // entry can have several. The expected reason needs to be among them.
+  final problemLine =
+      RegExp(r"/(skills|agents)/([^/:]+)(?:/[^:]+)?: (.*)$", multiLine: true);
+  final problems = <String, List<String>>{};
+  for (final match in problemLine.allMatches(out)) {
+    problems
+        .putIfAbsent("${match.group(1)}/${match.group(2)}", () => [])
+        .add(match.group(3)!);
+  }
+
+  final failures = <String>[];
+  for (final (slug, section, _, wantAccept, wantReason) in cases) {
+    final key = "$section/$slug";
+    final reasons = problems[key];
+    final refused = reasons != null;
+    final ok =
+        refused != wantAccept && (!refused || reasons!.any((r) => r.contains(wantReason)));
+    if (!ok) {
+      failures.add("$key: want accept=$wantAccept"
+          "${wantAccept ? "" : " reason~'$wantReason'"}, got ${reasons ?? "accept"}");
+    }
+  }
+
+  if (failures.isEmpty) {
+    stdout.writeln(
+        "$runner: ${cases.length} fixtures accept and refuse as the marketplace expects");
   } else {
-    stderr.writeln("$divergences divergence(s)");
+    stderr.writeln("$runner tier disagrees:\n${failures.join("\n")}\n--- output ---\n$out");
     exit(1);
   }
 }
-
-bool _eq(Map<String, String> a, Map<String, String> b) =>
-    a.length == b.length && a.entries.every((e) => b[e.key] == e.value);

@@ -5,7 +5,8 @@ on:
     paths:
       - "data/**"
       - ".github/workflows/validate.yml"
-      - "scripts/validate.py"
+      - "scripts/**"
+      - "tool/**"
 
 permissions:
   contents: read
@@ -16,19 +17,53 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
 
-      - uses: actions/setup-python@v7
+      # The validation source of truth is entoli's own code (skill_validate
+      # + frontmatter), run through its CLI. The repo is private, which the
+      # cross-repo GITHUB_TOKEN cannot fetch, so the Dart steps below are
+      # skipped until it goes public; the Python tier validates alone
+      # meanwhile, and the fixture test runs locally
+      # (ENTOLI_CHECKOUT=../entoli dart tool/frontmatter_diff_test.dart).
+      - uses: actions/checkout@v7
         with:
-          python-version: "3.14"
+          repository: Yiannis128/entoli
+          ref: marketplace-validation
+          path: entoli
+        continue-on-error: true
+        id: entoli_checkout
+
+      - if: steps.entoli_checkout.outcome == 'success'
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - if: steps.entoli_checkout.outcome == 'success'
+        name: Cache pub packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ hashFiles('entoli/pubspec.lock') }}
+
+      - if: steps.entoli_checkout.outcome == 'success'
+        name: Prepare entoli package
+        run: dart pub get --directory entoli
 
       - name: Collect touched entries
         run: |
+          git fetch origin "${{ github.base_ref }}" "${{ github.event.pull_request.head.sha }}"
           git diff --name-status -M \
             "origin/${{ github.base_ref }}...${{ github.event.pull_request.head.sha }}" \
             > /tmp/changed.txt
           cat /tmp/changed.txt
 
-      - name: Validate entries
-        run: python scripts/validate.py --changed /tmp/changed.txt
+      - name: Validate entries (entoli CLI — source of truth)
+        if: steps.entoli_checkout.outcome == 'success'
+        run: dart run entoli/tool/validate_marketplace.dart --data-root data --changed /tmp/changed.txt
+
+      # The two tiers must agree: both validators over the fixture set.
+      - name: Fixture check (Dart and Python agree)
+        if: steps.entoli_checkout.outcome == 'success'
+        run: ENTOLI_CHECKOUT=entoli dart tool/frontmatter_diff_test.dart
+
+      - name: Validate entries (Python tier)
+        run: python3 scripts/validate.py --changed /tmp/changed.txt
