@@ -31,6 +31,16 @@ top level. Agents are an entoli content type modeled on the same convention.
 - Lint Python: `ruff check scripts && ruff format scripts`
 - Lint changed markdown: `markdownlint <files>`
 
+## Layout reminder
+
+- `data/<kind>/<slug>/` are local entries: `SKILL.md` (skills) or `PROMPT.md`
+  (agents) with frontmatter, plus `README.md`. Frontmatter-only metadata;
+  there is no index file.
+- `ext/<kind>/<slug>/` are remote entries: a single `index.toml` manifest
+  (keys `repo`, `ref`, `path`, `tags`) pointing at content in another GitHub
+  repository — nothing else sits in the directory. See README "Remote
+  entries".
+
 ## Rules
 
 - Entries are frontmatter-only; there is no index file. Marketplace
@@ -40,6 +50,10 @@ top level. Agents are an entoli content type modeled on the same convention.
   are limited to the Agent Skills spec set.
 - Agent `PROMPT.md`: only `description` and `metadata` at the top level;
   never a `name` key — an agent's name is its file name.
+- Ext manifests declare location only (`repo`, `ref`, `path`, `tags`): no
+  metadata fields, since `version` etc. come from the fetched entry's own
+  frontmatter so nothing goes stale against its source. `tags` are optional
+  marketplace-side extras appended to the source's tags.
 - CI runs entoli's Dart CLI (`entoli/tool/validate_marketplace.dart`) as
   the validation source of truth, and `tool/frontmatter_diff_test.dart`
   over the same fixtures with `scripts/validate.py`, the Python mirror of
@@ -48,6 +62,11 @@ top level. Agents are an entoli content type modeled on the same convention.
   `lib/data/prompts/skill_validate.dart` change upstream, re-mirror them
   in `validate.py` and run the fixture test (command above) — both tiers
   must agree.
+- ext/ is validated only by the Python tier (`scripts/validate.py` +
+  `scripts/fetch_remote.py`): it fetches the remote content over the GitHub
+  API and applies the same frontmatter rules (with the contributor-author
+  exception documented in README). CI green means both entoli accepts the
+  local entries and the remote content passes the same rules.
 - The Python mirror imports PyYAML (system-installed locally and on CI
   runners, no install step); the Dart CLI is the only tier allowed to be
   stricter than what entoli's own parsers enforce — never the Python one.

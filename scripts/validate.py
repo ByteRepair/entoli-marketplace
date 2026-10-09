@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Quick standalone entry checks under data/.
+"""Quick standalone entry checks under data/ (and ext/ with network).
 
 Usage:
-  scripts/validate.py                 validate every entry in data/
+  scripts/validate.py                 validate every entry in data/ + ext/
   scripts/validate.py --changed FILE  validate only entries touched by a diff
   scripts/validate.py --entry data/skills/foo   validate only that entry
   scripts/validate.py --data-root DIR           validate a different tree
@@ -12,6 +12,13 @@ Usage:
 path adds or modifies content in it; deletions alone only validate the
 entry if a directory still remains (full removal is allowed, partial
 removal fails the missing-file checks).
+
+Entries under ext/<section>/<slug>/ are remote: their index.toml points at
+content in another GitHub repository (see fetch_remote.py), which this
+script fetches and checks with the same frontmatter rules as data/
+entries. That needs network access, so only this tier validates ext/ —
+entoli's Dart CLI has none. The ext root sits beside the data root
+(data/ -> ext/; a non-default --data-root looks for ext/ beside it).
 
 Checks are file presence, slug shape, UTF-8, PNG magic, and a Python
 mirror of entoli's frontmatter parser and Agent Skills spec rules — same
@@ -25,7 +32,7 @@ script is the quick local pass with no Dart toolchain required.
 import argparse
 import re
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 # The Agent Skills spec keys Entoli's validator enforces on SKILL.md
 # frontmatter (lib/data/prompts/skill_validate.dart). Constants match Entoli
@@ -51,13 +58,21 @@ SEMVER_RE = re.compile(
 )
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
-DATA_ROOT = Path("data")
+ENTRY_ROOTS = ("data", "ext")
+ROOTS: dict[str, Path] = {"data": Path("data"), "ext": Path("ext")}
+DATA_ROOT = ROOTS["data"]
+EXT_ROOT = ROOTS["ext"]
+SOURCES_ROOT = Path("sources")
 ENTRY_KINDS = {"skills": "SKILL.md", "agents": "PROMPT.md"}
 ENTRY_FILES = {
     "skills": ("README.md", "SKILL.md"),
     "agents": ("README.md", "PROMPT.md"),
 }
 AGENT_ALLOWED = {"README.md", "PROMPT.md", "profile.png"}
+not_part_of_agent_schema = (
+    f"file is not part of the agent schema (expected only "
+    f"{', '.join(sorted(AGENT_ALLOWED))})"
+)
 
 # Entoli's frontmatter parser (lib/domain/frontmatter.dart) as two tiers:
 # strict YAML first (the `yaml` package there; PyYAML here, which entoli's
@@ -216,6 +231,13 @@ def _check_meta_fields(path: Path, metadata: dict[str, str]) -> list[str]:
             f"{path}: metadata carries no usable 'author' (indented "
             f"author: <name> under metadata:)"
         )
+    errors.extend(_check_version_and_tags(path, metadata))
+    return errors
+
+
+def _check_version_and_tags(path: Path, metadata: dict[str, str]) -> list[str]:
+    """The metadata parts that apply to remote entries too (no author rule)."""
+    errors = []
     version = metadata.get("version")
     if version is not None and not SEMVER_RE.fullmatch(version):
         errors.append(
@@ -237,7 +259,14 @@ def _check_meta_fields(path: Path, metadata: dict[str, str]) -> list[str]:
     return errors
 
 
-def check_entry_frontmatter(path: Path, kind: str, slug: str, text: str) -> list[str]:
+def check_entry_frontmatter(
+    path: Path, kind: str, slug: str, text: str, require_author: bool = True
+) -> list[str]:
+    """The frontmatter rules both tiers enforce.
+
+    Remote entries pass require_author=False: their authors are the source
+    repository's contributors (fetch_remote), not frontmatter metadata.
+    """
     errors = []
     scalars, metadata, has_block = parse_frontmatter(text)
     if not has_block:
@@ -289,7 +318,12 @@ def check_entry_frontmatter(path: Path, kind: str, slug: str, text: str) -> list
                     f"carries only description and metadata)"
                 )
 
-    errors.extend(_check_meta_fields(path, metadata))
+    if require_author:
+        errors.extend(_check_meta_fields(path, metadata))
+    else:
+        # Marketplace-only fields stay the source's choice; version is still
+        # SemVer-checked when present, tags are still comma-separated.
+        errors.extend(_check_version_and_tags(path, metadata))
     return errors
 
 
@@ -304,49 +338,65 @@ def check_profile_png(base: Path) -> list[str]:
             magic = f.read(len(PNG_MAGIC))
     except OSError as exc:
         return [f"{path}: cannot read: {exc}"]
-    if not magic.startswith(PNG_MAGIC):
-        return [f"{path}: not a valid PNG file (bad magic bytes)"]
-    return []
+    return _png_problems(path, magic)
+
+
+def _png_problems(label, head: bytes) -> list[str]:
+    """The PNG-magic errors for a file's leading bytes (empty when a PNG)."""
+    if head.startswith(PNG_MAGIC):
+        return []
+    return [f"{label}: not a valid PNG file (bad magic bytes)"]
 
 
 def check_agent_extras(base: Path) -> list[str]:
     """A stray file in an agent directory is what the Dart CLI refuses, so
     it is an error here too — never a warning (tiers must not disagree)."""
     return [
-        f"{p}: file is not part of the agent schema (expected only "
-        f"{', '.join(sorted(AGENT_ALLOWED))})"
+        f"{p}: {not_part_of_agent_schema}"
         for p in sorted(base.iterdir())
         if p.name not in AGENT_ALLOWED
     ]
 
 
 def validate_section_of(path: Path) -> tuple[str, str] | None:
-    """Map a (relative) path under data/ to its (section, slug)."""
-    prefix = f"{DATA_ROOT}/"
-    if not str(path).startswith(prefix):
-        return None
-    rest = str(path)[len(prefix) :]
-    if "/" not in rest:
-        return None  # files at data/<section>/ level are not entries
-    section, remainder = rest.split("/", 1)
-    if section not in ENTRY_KINDS:
-        return None
-    return section, remainder.split("/", 1)[0]
+    """Map a (relative) path under a root to its (section, slug).
+
+    Roots are the entry trees: data/ (local entries) and ext/ (remote
+    entry manifests). Files at <root>/<section>/ level are not entries.
+    """
+    for root in ENTRY_ROOTS:
+        prefix = f"{root}/"
+        if not str(path).startswith(prefix):
+            continue
+        rest = str(path)[len(prefix) :]
+        if "/" not in rest:
+            return None  # files at <root>/<section>/ level are not entries
+        section, remainder = rest.split("/", 1)
+        if section not in ENTRY_KINDS:
+            return None
+        return section, remainder.split("/", 1)[0]
+    return None
 
 
-def discover_slugs(section: str) -> list[str]:
-    root = DATA_ROOT / section
+def discover_slugs(section: str, root: Path) -> list[str]:
+    root = root / section
     if not root.is_dir():
         return []
     return sorted(p.name for p in root.iterdir() if p.is_dir())
 
 
+def check_slug_shape(base: Path, slug: str) -> list[str]:
+    if not SLUG_RE.fullmatch(slug):
+        return [f"{base}: slug must match {SLUG_RE.pattern}"]
+    return []
+
+
 def validate_entry(section: str, slug: str) -> list[str]:
+    """Validate a local entry directory under the data root."""
     base = DATA_ROOT / section / slug
     errors: list[str] = []
+    errors.extend(check_slug_shape(base, slug))
 
-    if not SLUG_RE.fullmatch(slug):
-        errors.append(f"{base}: slug must match {SLUG_RE.pattern}")
     if not base.is_dir():
         errors.append(f"{base}: entry directory does not exist")
         return errors
@@ -373,10 +423,74 @@ def validate_entry(section: str, slug: str) -> list[str]:
     return errors
 
 
-def collect_slugs_from_diff(diff_text: str) -> dict[str, set[str]]:
-    """Extract slugs to validate from name-status (or name-only) diff lines."""
-    touched: dict[str, set[str]] = {}
-    kept: dict[str, set[str]] = {}
+def check_remote_entry(result) -> list[tuple]:
+    """The fetched remote content, under the same rules as data/ entries.
+
+    Returns (entry, errors) pairs: an entry with errors breaks the content
+    rules and is excluded from the marketplace by the caller.
+    """
+    checked: list[tuple] = []
+    sorted_tree = sorted(result.tree)
+    for entry in result.entries:
+        entry_file = ENTRY_KINDS[entry.section]
+        errors: list[str] = []
+        raw = entry.files.get(entry_file)
+        if raw is None:
+            errors.append(
+                f"{entry.repo}/{entry.dir_path}: entry file {entry_file} "
+                f"was not fetched"
+            )
+            checked.append((entry, errors))
+            continue
+        text = raw.decode("utf-8", errors="replace")
+        # A virtual path under sources/ — errors read like a tree of the
+        # remote content, one directory per published entry.
+        virtual = (
+            SOURCES_ROOT / entry.section / entry.key.replace("/", "_") / entry_file
+        )
+        errors.extend(
+            check_entry_frontmatter(
+                virtual, entry.section, entry.name_slug, text, require_author=False
+            )
+        )
+        if readme := entry.files.get("README.md"):
+            try:
+                readme.decode("utf-8")
+            except UnicodeDecodeError:
+                errors.append(f"{virtual.parent / 'README.md'}: not valid UTF-8")
+
+        if entry.section == "agents":
+            if (png := entry.files.get("profile.png")) is not None:
+                errors.extend(_png_problems(virtual.parent / "profile.png", png))
+            # Skill directories bundle freely; an agent may carry only the
+            # schema files, checked against the remote tree listing.
+            prefix = f"{entry.dir_path}/"
+            for p in sorted_tree:
+                if not p.startswith(prefix):
+                    continue
+                top = PurePosixPath(p[len(prefix) :]).parts[0]
+                if top not in AGENT_ALLOWED:
+                    errors.append(f"{entry.repo}/{p}: {not_part_of_agent_schema}")
+        checked.append((entry, errors))
+    return checked
+
+
+def validate_ext_entry(section: str, slug: str) -> tuple:
+    """Validate a remote entry manifest; fetches from GitHub (network).
+
+    Returns (result|None, errors): result is the fetched RemoteResult (its
+    `excluded` count and `exclude_reasons` carry per-entry exclusions),
+    None when the manifest itself failed — those errors are fatal.
+    """
+    import fetch_remote
+
+    return fetch_remote.fetch_result(EXT_ROOT, section, slug)
+
+
+def collect_slugs_from_diff(diff_text: str) -> dict[tuple[str, str], set[str]]:
+    """Extract touched slugs per (root, section) from diff lines."""
+    touched: dict[tuple[str, str], set[str]] = {}
+    kept: dict[tuple[str, str], set[str]] = {}
     for line in diff_text.splitlines():
         parts = line.split("\t")
         if not parts or not parts[0]:
@@ -385,41 +499,55 @@ def collect_slugs_from_diff(diff_text: str) -> dict[str, set[str]]:
             status, paths = "M", parts
         else:
             status, paths = parts[0][:1], parts[1:]
-        if status == "D":
-            mapped = validate_section_of(Path(paths[0]))
-            if mapped:
-                kept.setdefault(mapped[0], set()).add(mapped[1])
-            continue
-        mapped = validate_section_of(Path(paths[-1]))
-        if mapped:
-            touched.setdefault(mapped[0], set()).add(mapped[1])
-        if status in ("R", "C") and len(paths) > 1:
-            mapped = validate_section_of(Path(paths[0]))
-            if mapped:
-                kept.setdefault(mapped[0], set()).add(mapped[1])
+        if (mapped := validate_section_of(Path(paths[-1]))) and status != "D":
+            touched.setdefault((paths[-1].split("/", 1)[0], mapped[0]), set()).add(
+                mapped[1]
+            )
+        if (status == "D" or (status in ("R", "C") and len(paths) > 1)) and (
+            mapped := validate_section_of(Path(paths[0]))
+        ):
+            kept.setdefault((paths[0].split("/", 1)[0], mapped[0]), set()).add(
+                mapped[1]
+            )
 
     # Deletion-only slugs stay unvalidated (full removal) unless a
     # directory still exists (partial removal), which the file checks
-    # then reject.
-    result: dict[str, set[str]] = {}
-    for section in ENTRY_KINDS:
-        slugs = set(touched.get(section, set()))
-        for slug in kept.get(section, set()):
-            if (DATA_ROOT / section / slug).is_dir():
-                slugs.add(slug)
-        result[section] = slugs
+    # then reject. The tree mapping handles both root-level touches
+    # (e.g. a stray data/skills/foo.md file) and root-level deletes of
+    # entry trees, which keep nothing.
+    result: dict[tuple[str, str], set[str]] = {}
+    for root in ENTRY_ROOTS:
+        base = ROOTS[root]
+        for section in ENTRY_KINDS:
+            slugs = set(touched.get((root, section), set()))
+            for slug in kept.get((root, section), set()):
+                if (base / section / slug).is_dir():
+                    slugs.add(slug)
+            result[(root, section)] = slugs
     return result
 
 
+def main_with(argv: list[str]) -> int:
+    """main() over an explicit argv (test hook)."""
+    return _validate(argv[1:])
+
+
 def main() -> int:
-    global DATA_ROOT
+    return _validate(sys.argv[1:])
+
+
+def _validate(argv: list[str]) -> int:
+    global SOURCES_ROOT, DATA_ROOT, EXT_ROOT
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--data-root",
         type=Path,
         default=DATA_ROOT,
         metavar="DIR",
-        help="the tree holding <data-root>/{skills,agents} (default data/)",
+        help=(
+            "the tree holding <data-root>/{skills,agents} (default data/); "
+            "ext/ and sources/ live beside it"
+        ),
     )
     parser.add_argument(
         "--changed",
@@ -434,32 +562,51 @@ def main() -> int:
         metavar="DATA/SECTION/SLUG",
         help="validate a specific entry (repeatable)",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     DATA_ROOT = args.data_root
+    ROOTS["data"] = args.data_root
+    EXT_ROOT = args.data_root.parent / "ext"
+    ROOTS["ext"] = EXT_ROOT
+    SOURCES_ROOT = args.data_root.parent / "sources"
 
-    sections: dict[str, set[str]] = {}
+    sections: dict[tuple[str, str], set[str]] = {}
     if args.changed:
         diff = args.changed.read_text(encoding="utf-8", errors="replace")
         sections = collect_slugs_from_diff(diff)
     elif not args.entry:
-        sections = {s: set(discover_slugs(s)) for s in ENTRY_KINDS}
+        sections = {
+            (r, s): set(discover_slugs(s, ROOTS[r]))
+            for r in ENTRY_ROOTS
+            for s in ENTRY_KINDS
+        }
     for target in args.entry:
         mapped = validate_section_of(Path(target))
         if mapped is None:
             print(
-                f"error: --entry {target!r} is not data/<section>/<slug>",
+                f"error: --entry {target!r} is not [data|ext]/<section>/<slug>",
                 file=sys.stderr,
             )
             return 2
-        sections.setdefault(mapped[0], set()).add(mapped[1])
+        sections.setdefault((Path(target).parts[0], mapped[0]), set()).add(mapped[1])
 
     errors: list[str] = []
+    warnings: list[str] = []
     checked = 0
-    for section in ENTRY_KINDS:
-        for slug in sorted(sections.get(section, set())):
+    for (root, section), slugs in sorted(sections.items()):
+        for slug in sorted(slugs):
             checked += 1
-            errors.extend(validate_entry(section, slug))
+            if root == "ext":
+                result, ext_errors = validate_ext_entry(section, slug)
+                errors.extend(ext_errors)
+                if result is not None:
+                    warnings.extend(result.exclusion_warnings(f"ext/{section}/{slug}"))
+            else:
+                errors.extend(validate_entry(section, slug))
 
+    if warnings:
+        print("warnings (not fatal):")
+        for warning in warnings:
+            print(f"  {warning}")
     if errors:
         print(f"validation failed with {len(errors)} error(s):")
         for error in errors:
