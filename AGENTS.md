@@ -23,8 +23,8 @@ top level. Agents are an entoli content type modeled on the same convention.
 - Validate with entoli's own rules (source of truth; needs a sibling
   `../entoli` checkout with `flutter pub get` run once):
   `dart run ../entoli/tool/validate_marketplace.dart`
-- The fixture check that entoli's CLI accepts/refuses what this repo
-  promises: `ENTOLI_CHECKOUT=../entoli dart tool/frontmatter_diff_test.dart`
+- Both validators over the fixture set (the tier-sync guarantee):
+  `ENTOLI_CHECKOUT=../entoli dart tool/frontmatter_diff_test.dart`
 - Build the site into `_site/`: `python3 scripts/build_site.py`
 - Preview (then open [localhost:8621](http://localhost:8621)):
   `python3 -m http.server 8621 --directory _site`
@@ -41,13 +41,15 @@ top level. Agents are an entoli content type modeled on the same convention.
 - Agent `PROMPT.md`: only `description` and `metadata` at the top level;
   never a `name` key — an agent's name is its file name.
 - CI runs entoli's Dart CLI (`entoli/tool/validate_marketplace.dart`) as
-  the validation source of truth, beside `scripts/validate.py`, a Python
-  port of the same rules for local use without a Dart toolchain. If
-  entoli's `lib/domain/frontmatter.dart` or
-  `lib/data/prompts/skill_validate.dart` change upstream, re-port them to
-  `validate.py` and run the fixture test (command above) — all cases must
-  agree.
-- Python scripts are stdlib-only; the Python check must never validate
-  with semantics looser than entoli's own parser and spec checks.
+  the validation source of truth, and `tool/frontmatter_diff_test.dart`
+  over the same fixtures with `scripts/validate.py`, the Python mirror of
+  the same rules for local use without a Dart toolchain. If entoli's
+  `lib/domain/frontmatter.dart` or
+  `lib/data/prompts/skill_validate.dart` change upstream, re-mirror them
+  in `validate.py` and run the fixture test (command above) — both tiers
+  must agree.
+- The Python mirror imports PyYAML (system-installed locally and on CI
+  runners, no install step); the Dart CLI is the only tier allowed to be
+  stricter than what entoli's own parsers enforce — never the Python one.
 - `_site/` is generated output; never commit it.
 - CI green must mean entoli accepts the entry.
