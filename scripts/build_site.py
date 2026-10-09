@@ -2,6 +2,10 @@
 """Build the GitHub Pages site into _site/.
 
 - copies data/skills -> _site/skills and data/agents -> _site/agents
+- zips each skill into _site/skills/<slug>.skill — the one file an entoli
+  client fetches to install the whole directory (SKILL.md and the files
+  beside it); parsed by lib/data/prompts/skill_import.dart, which strips the
+  top-level folder
 - generates _site/skills/index.json and _site/agents/index.json from each
   entry's SKILL.md / PROMPT.md frontmatter, keyed by slug
 
@@ -12,6 +16,7 @@ produce output for invalid data.
 import json
 import shutil
 import sys
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -37,6 +42,19 @@ def entry_meta(section: str, slug: str) -> dict:
     if tags := metadata.get("tags"):
         meta["tags"] = [t.strip() for t in tags.split(TAGS_DELIM) if t.strip()]
     return meta
+
+
+def package_skill(src: Path, dst: Path) -> None:
+    """Zip [src] (a skill directory) into [dst] as a `.skill`.
+
+    Entries sit under the slug as one top-level folder, the layout a zip of a
+    directory naturally has; entoli's parser takes the shallowest SKILL.md as
+    the root and strips the prefix, so the folder name is not load-bearing.
+    """
+    with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as archive:
+        for path in sorted(src.rglob("*")):
+            if path.is_file():
+                archive.write(path, arcname=f"{src.name}/{path.relative_to(src)}")
 
 
 def build() -> int:
@@ -66,6 +84,8 @@ def build() -> int:
             dst = SITE / section / slug
             if src.is_dir():
                 shutil.copytree(src, dst)
+                if section == "skills":
+                    package_skill(src, SITE / section / f"{slug}.skill")
         (SITE / section / "index.json").write_text(
             json.dumps(meta_all[section], indent=2, ensure_ascii=False) + "\n",
             encoding="utf-8",

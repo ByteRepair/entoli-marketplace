@@ -30,6 +30,23 @@ files from the body with relative paths; `references/`, `scripts/`, and
 `assets/` are the conventional directories. `profile.png` is served next to the
 prompt, where entoli looks for an agent's picture.
 
+### Build outputs
+
+Beside the entries themselves, the build writes:
+
+```text
+_site/skills/<slug>.skill        zip of the whole skill directory, one per
+                                 skill — the file an entoli client fetches to
+                                 install it, through the app's .skill import
+_site/<section>/index.json       frontmatter of every entry, keyed by slug
+```
+
+The body of `SKILL.md` holds the instructions entoli loads; the body of
+`PROMPT.md` holds the system prompt the agent runs under. Reference bundled
+files from the body with relative paths; `references/`, `scripts/`, and
+`assets/` are the conventional directories. `profile.png` is served next to the
+prompt, where entoli looks for an agent's picture.
+
 ## Slugs
 
 The directory name under `data/skills/` or `data/agents/` is the entry's slug.
@@ -92,7 +109,9 @@ its file name, so no `name` key is used.
 
 `data/skills/` maps to `/skills` and `data/agents/` maps to `/agents` on GitHub
 Pages, with file paths preserved: `data/skills/code-review/SKILL.md` is served
-at `/skills/code-review/SKILL.md`.
+at `/skills/code-review/SKILL.md`. Beside these, the build zips each skill
+directory into `/skills/<slug>.skill` — the one file an entoli client fetches
+to install the whole entry (see [Build outputs](#build-outputs)).
 
 ### index.json
 
