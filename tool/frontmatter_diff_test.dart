@@ -1,108 +1,79 @@
-// Differential test: entoli's Frontmatter.parse (Dart, via fm_dart.dart)
-// against the Python port in scripts/validate.py, over adversarial
-// frontmatter cases. Requires a sibling entoli checkout (../entoli).
+// The marketplace's validation is the Dart CLI in a sibling entoli
+// checkout (tool/validate_marketplace.dart); this test drives it with the
+// canonical frontmatter fixtures and asserts the outcomes entoli produces —
+// accepted or refused, with a reason substring to match. It is the check
+// that a marketplace CI green really does mean entoli accepts the entry.
+//
+// The entoli checkout is found at ../entoli, or wherever ENOLI_CHECKOUT
+// points.
 //
 //   dart tool/frontmatter_diff_test.dart
-//
-// Exits 0 when every case agrees on scalars, metadata, and block presence;
-// prints divergences and exits 1 otherwise.
-import "dart:convert";
 import "dart:io";
 
-import "fm_dart.dart";
+final repo = Directory.current.path;
+final entoliRoot = Platform.environment["ENTOLI_CHECKOUT"] ?? "$repo/../entoli";
+final cli = "$entoliRoot/tool/validate_marketplace.dart";
 
 void main() {
-  final repo = Directory.current.path;
-  final entoliFrontmatter = File("$repo/../entoli/lib/domain/frontmatter.dart");
-  if (!entoliFrontmatter.existsSync()) {
-    stderr.writeln("no entoli checkout at ${entoliFrontmatter.path}");
+  final entoliDir = Directory(entoliRoot);
+  final cliFile = File(cli);
+  if (!entoliDir.existsSync() || !cliFile.existsSync()) {
+    stderr.writeln("no entoli checkout with tool/validate_marketplace.dart at $entoliRoot");
     exit(2);
   }
 
-  final cases = <String>[
-    "---\nname: foo\ndescription: bar\n---\n\nbody\n",
-    "---\nname: \"quoted\"\ndescription: 'single'\n---\nbody\n",
-    "---\nname: foo\nmetadata:\n  author: A\n  version: 1.2.0\n---\nbody\n",
-    "---\nmetadata:\n  tags: a, b\n  author: X\n---\n",
-    "---\n---\nbody\n",
-    "---\ndescription: spaced   \nname:    indented-name\n---\n",
-    "no block at all\n",
-    "---\nunclosed\n",
-    "\n---\nnot at start\n---\n",
-    "---\r\nname: crlf\r\ndescription: crlf\r\n---\r\nbody\r\n",
-    "---\nname: pre\nmetadata:\n  author: A\nother: after-block\n---\nbody\n",
-    "---\nmetadata:\n  author: A\nname: after\n---\n",
-    "---\nmetadata:\n  deeper:\n    x: 1\n  author: B\n---\n",
-    "---\nmetadata:\n    author: four-space\n---\n",
-    "---\nmetadata:\n  author: A\n    version: deeper\n---\n",
-    "---\nmetadata:\n\n  author: after-blank\n---\n",
-    "---\nmetadata: inline\n---\n",
-    "---\nname: 'sq'\ndescription: \"dq\"\nmetadata:\n  author: 'q'\n  version: \"09.9.9\"\n---\n",
-    "---\nname: a\"b\ndescription: it's\n---\n",
-    "---\nname: \"\n---\n",
-    "---\nname: \"unterminated\n---\n",
-    "---\nname: a: b\ndescription: c: d\n---\n",
-    "---\nurl: http://example.com\n---\n",
-    "---\nname: spaced  value\n---\n",
-    "---\nname: name\nname: second\n---\n",
-    "---\nname-with-dash: v\nkey.name: v\nkey_name: v\nkey123: v\n---\n",
-    "---\n NAME: upper \n---\n",
-    "---\nname: v\n\ttabbed: x\n---\n",
-    "---\nname: v\n metadata:\n   author: A\n---\n",
-    "---\nlist:\n  - item\nname: keep\n---\n",
-    "---\nmetadata:\n  author: A\n  tags: x,y,,z\n---\n",
-    "---\nmetadatas: x\n---\n",
-    "---\nmetadata2:\n  author: B\n---\n",
-    "---\nname: empty-metadata\nmetadata:\n---\n",
-    "---\nname: dup\nmetadata:\n  author: A\nmetadata:\n  author: B\n---\n",
-    "---\ndescription: line1\n  continued: indented\n---\n",
+  // (frontmatter source, expected accept, reason substring when refused)
+  final cases = <(String, bool, String)>[
+    ("---\nname: s\ndescription: d\nmetadata:\n  author: A\n---\n\nbody\n", true, ""),
+    ("---\nname: s\ndescription: >-\n  folded description\n  over lines.\nmetadata:\n  author: A\n---\n", true, ""),
+    ("---\nname: s\ndescription: |-\n  literal lines\n  stay.\nmetadata:\n  author: A\n  version: 1.0.0\n---\n", true, ""),
+    ("---\nname: s\ndescription: quoted \"value\" here # and a comment\nmetadata:\n  author: 'sq'\n---\n", true, ""),
+    ("---\nname: s\ndescription: d\nmetadata:\n  author: A\n  version: 2.0.0-rc.1+build\n  tags: a, b\n---\n", true, ""),
+    // refusals
+    ("no frontmatter here\n", false, "no frontmatter block"),
+    ("---\ndescription: d\nmetadata:\n  author: A\n---\n", false, "missing 'name'"),
+    ("---\nname: other\ndescription: d\nmetadata:\n  author: A\n---\n", false, "does not match the folder"),
+    ("---\nname: s\ndescription: d\nauthor: A\n---\n", false, "unknown frontmatter key"),
+    ("---\nname: s\ndescription: d\nmetadata:\n  version: 1.0\n  author: A\n---\n", false, "SemVer"),
+    ("---\nname: s\ndescription: d\nmetadata:\n  author: A\n  tags: [a, b]\n---\n", false, "comma-separated"),
+    ("---\nname: s\ndescription: d\nmetadata:\n  author: A\n  tags: a, a\n---\n", false, "duplicates"),
+    ("---\nname: s\ndescription: d\n---\n", false, "no usable 'author'"),
+    ("---\nname: s\ndescription: d\nmetadata:\n  author: A\nother: x\n---\n", false, "unknown frontmatter key"),
+    // legacy shapes entoli still accepts: not YAML, parsed by the fallback
+    ("---\nname: s\ndescription: audits the code: all of it\nmetadata:\n  author: A\n---\n", true, ""),
   ];
 
-  var divergences = 0;
-  final tmp = Directory.systemTemp.createTempSync("fmtest");
-  for (final source in cases) {
-    final fm = Frontmatter.parse(source);
-    final caseFile = File("${tmp.path}/case.txt");
-    caseFile.writeAsStringSync(source);
-    final result = Process.runSync("python3", [
-      "-c",
-      "import sys, json; sys.path.insert(0, r'$repo/scripts');"
-          "import validate; s, m, b = validate.parse_frontmatter(open(sys.argv[1]).read());"
-          "print(json.dumps({'scalars': s, 'metadata': m, 'has_block': b}))",
-      caseFile.path,
-    ]);
-    if (result.exitCode != 0) {
-      divergences++;
-      stderr.writeln("python failed on ${jsonEncode(source)}:\n${result.stderr}");
-      continue;
+  var failures = 0;
+  final tmp = Directory.systemTemp.createTempSync("fmcheck");
+  for (final (frontmatter, wantAccept, wantReason) in cases) {
+    final skillDir = Directory("${tmp.path}/skills/s")
+      ..createSync(recursive: true);
+    File("${skillDir.path}/SKILL.md").writeAsStringSync(frontmatter);
+    File("${skillDir.path}/README.md").writeAsStringSync("# r\n");
+    final result = Process.runSync("dart", [
+      "run",
+      "tool/validate_marketplace.dart",
+      "--data-root",
+      tmp.path,
+    ], workingDirectory: entoliRoot);
+    final out = (result.stdout as String) + (result.stderr as String);
+    final accepted = result.exitCode == 0;
+    final ok = accepted == wantAccept &&
+        (wantAccept || out.contains(wantReason)) &&
+        (accepted || wantAccept || out.contains(wantReason));
+    if (!ok) {
+      failures++;
+      stderr.writeln("MISMATCH on ${frontmatter.replaceAll("\n", "\\n")}\n"
+          "  want accept=$wantAccept reason='$wantReason'\n"
+          "  got exit=${result.exitCode}\n$out");
     }
-    final py = jsonDecode(result.stdout as String) as Map<String, dynamic>;
-    final pyScalars = (py["scalars"] as Map).cast<String, String>();
-    final pyMeta = (py["metadata"] as Map).cast<String, String>();
-    // Dart's block rule after its own CRLF normalization: --- opener AND a
-    // closing \n--- — the same thing has_block reports on the Python side.
-    final normalized = source.replaceAll("\r\n", "\n");
-    final dartHasBlock =
-        normalized.startsWith("---\n") && normalized.indexOf("\n---", 3) >= 0;
-    final same = _eq(fm.scalars, pyScalars) &&
-        _eq(fm.metadata, pyMeta) &&
-        (py["has_block"] as bool) == dartHasBlock;
-    if (!same) {
-      divergences++;
-      stderr.writeln("DIVERGENCE on: ${jsonEncode(source)}\n"
-          "  dart scalars=${fm.scalars} metadata=${fm.metadata}\n"
-          "  py   scalars=$pyScalars metadata=$pyMeta "
-          "has_block=${py["has_block"]}");
-    }
+    skillDir.deleteSync(recursive: true);
   }
   tmp.deleteSync(recursive: true);
-  if (divergences == 0) {
-    stdout.writeln("${cases.length} cases: dart and python parsers agree");
+  if (failures == 0) {
+    stdout.writeln("${cases.length} cases: entoli accepts and refuses as the marketplace expects");
   } else {
-    stderr.writeln("$divergences divergence(s)");
+    stderr.writeln("$failures mismatch(es)");
     exit(1);
   }
 }
-
-bool _eq(Map<String, String> a, Map<String, String> b) =>
-    a.length == b.length && a.entries.every((e) => b[e.key] == e.value);

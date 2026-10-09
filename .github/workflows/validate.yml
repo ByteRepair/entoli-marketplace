@@ -5,7 +5,8 @@ on:
     paths:
       - "data/**"
       - ".github/workflows/validate.yml"
-      - "scripts/validate.py"
+      - "scripts/**"
+      - "tool/**"
 
 permissions:
   contents: read
@@ -16,8 +17,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+
+      # The validation source of truth is entoli's own code (skill_validate
+      # + frontmatter), run through its CLI; CI checks out the repo beside
+      # this one so `dart ../entoli/tool/...` resolves.
+      - uses: actions/checkout@v7
         with:
-          fetch-depth: 0
+          repository: ByteRepair/entoli
+          ref: master
+          path: entoli
+
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
 
       - uses: actions/setup-python@v7
         with:
@@ -25,10 +37,17 @@ jobs:
 
       - name: Collect touched entries
         run: |
+          git fetch origin "${{ github.base_ref }}" "${{ github.event.pull_request.head.sha }}"
           git diff --name-status -M \
             "origin/${{ github.base_ref }}...${{ github.event.pull_request.head.sha }}" \
             > /tmp/changed.txt
           cat /tmp/changed.txt
 
-      - name: Validate entries
-        run: python scripts/validate.py --changed /tmp/changed.txt
+      - name: Prepare entoli package
+        run: dart pub get --directory entoli
+
+      - name: Validate entries (entoli CLI — source of truth)
+        run: dart run entoli/tool/validate_marketplace.dart --data-root data --changed /tmp/changed.txt
+
+      - name: Validate entries (Python quick check)
+        run: python3 scripts/validate.py --changed /tmp/changed.txt

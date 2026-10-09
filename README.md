@@ -3,6 +3,12 @@
 This repository contains the content served by the entoli marketplace: skills
 and agents for entoli clients to discover and install.
 
+Skills follow the [Agent Skills spec](https://agentskills.io/specification) —
+entoli implements that spec, and a skill this repo serves must conform to it
+(`SKILL.md` frontmatter grammar and caps, `name` matching the directory, top
+level limited to the spec's key set). Agents are an entoli content type
+modeled on the same convention.
+
 Everything under `data/` is published to GitHub Pages (see
 [Publishing](#publishing)). All content is licensed AGPLv3 (see
 [LICENSE](LICENSE)); the AGPLv3 grant covers every entry, so entries carry no
@@ -36,8 +42,10 @@ Beside the entries themselves, the build writes:
 
 ```text
 _site/skills/<slug>.skill        zip of the whole skill directory, one per
-                                 skill — the file an entoli client fetches to
-                                 install it, through the app's .skill import
+                                 skill, served beside the entry's directory
+                                 (skills/<slug>.skill, not inside it) — the
+                                 file an entoli client fetches to install it,
+                                 through the app's .skill import
 _site/<section>/index.json       frontmatter of every entry, keyed by slug
 ```
 
@@ -88,14 +96,15 @@ metadata:
 | `version`     | metadata | no       | valid SemVer string                |
 | `tags`        | metadata | no       | comma-separated; unique            |
 
-Rules that follow from entoli's parser (a strict regex subset of YAML):
+Rules that follow from the frontmatter grammar (real YAML, as the Agent
+Skills spec's examples are written):
 
 - The file must start with `---\n`; the closing `---` must sit on its own line.
-- `metadata:` entries are single `key: value` lines indented under it at one
-  uniform indent. Keep `metadata:` as the last frontmatter entry: entoli's
-  parser drops a scalar key that follows the nested block.
-- `tags` is a comma-separated plain string, not a YAML list; entoli reads
-  `[a, b]` as the literal string `[a, b]`.
+- `metadata:` entries are `key: value` lines indented under it at one uniform
+  indent; its values are strings.
+- `tags` is a comma-separated plain string, not a YAML list.
+- Folded (`>-`) and literal (`|`) block scalars, quoting, and comments are
+  accepted, so long descriptions may span lines.
 
 Skills additionally: top-level keys are exactly the spec's (`name`,
 `description`, `license`, `compatibility`, `metadata`, `allowed-tools`), the
@@ -150,13 +159,20 @@ entoli clients consume.
 
 ## Validation
 
-Every pull request that adds or modifies content under `data/` is validated by
-[scripts/validate.py](scripts/validate.py):
+Every pull request that adds or modifies content under `data/` is validated
+twice:
 
-- Each touched skill has `SKILL.md` and `README.md`, and each touched agent has
-  `PROMPT.md` and `README.md`.
-- Frontmatter and slugs follow the rules above, checked with the same parser
-  semantics entoli uses, so a green check means entoli accepts the entry.
+1. **Entoli's own CLI — the source of truth.** CI checks out the entoli repo
+   beside this one and runs `dart run entoli/tool/validate_marketplace.dart`,
+   which validates entries using the same frontmatter parser and Agent Skills
+   spec checks the app applies at import. A green run there is exactly
+   "entoli accepts the entry".
+2. **A Python quick pass.** [scripts/validate.py](scripts/validate.py) runs
+   the same rules as a port, so contributors without a Dart toolchain get the
+   same checks locally.
 
-On merge to `main`, the site is rebuilt and deployed to GitHub Pages. The deploy
-re-runs the same validation and fails on invalid data.
+Beyond the shared rules, each touched skill must have `SKILL.md` and
+`README.md`, and each touched agent must have `PROMPT.md` and `README.md`.
+
+On merge to `main`, the site is rebuilt and deployed to GitHub Pages. The
+deploy re-runs the same validation and fails on invalid data.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate marketplace entries under data/.
+"""Quick standalone entry checks under data/.
 
 Usage:
   scripts/validate.py                 validate every entry in data/
@@ -11,6 +11,12 @@ Usage:
 path adds or modifies content in it; deletions alone only validate the
 entry if a directory still remains (full removal is allowed, partial
 removal fails the missing-file checks).
+
+Checks are file presence, slug shape, UTF-8, PNG magic, and a Python port
+of entoli's frontmatter parser and Agent Skills spec rules. For PRs, CI
+additionally runs entoli's own Dart CLI (tool/validate_marketplace.dart in
+the entoli repo) as the source of truth; this script is the fast local
+pass with no Dart toolchain required.
 """
 
 import argparse
