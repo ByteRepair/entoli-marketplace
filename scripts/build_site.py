@@ -157,6 +157,9 @@ def build() -> int:
     if SITE.exists():
         shutil.rmtree(SITE)
     for section in validate.ENTRY_KINDS:
+        # The section index exists even when the section is empty; the
+        # directory must be there before any entry copy or index write.
+        (SITE / section).mkdir(parents=True, exist_ok=True)
         for slug in local_slugs[section]:
             src = validate.DATA_ROOT / section / slug
             shutil.copytree(src, SITE / section / slug)

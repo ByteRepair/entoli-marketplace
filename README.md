@@ -50,7 +50,8 @@ It must be lowercase kebab-case:
 ^[a-z0-9]+(-[a-z0-9]+)*$
 ```
 
-Examples: `code-review`, `release-notes`, `py2`. The slug is the entry's
+Examples: `release-notes`, `fashion-collection-planner`, `py2`. The
+slug is the entry's
 identity in URLs and in `index.json`.
 
 Slugs under `ext/` follow the same rule; the published key of a sub-entry is
@@ -66,10 +67,10 @@ string-to-string map.
 
 ```yaml
 ---
-name: code-review
+name: py2
 description: >-
-  Reviews diffs for bugs and style problems. Use this when the user asks to
-  review a diff or a pull request.
+  Converts Python 2 code to modern idioms. Use this when the user asks to
+  port a Python 2 file or codebase to Python 3.
 metadata:
   author: Ada Lovelace
   version: 1.2.0
@@ -153,8 +154,8 @@ CI. Pin a tag or commit SHA to decouple.
 ## Publishing
 
 `data/skills/` maps to `/skills` and `data/agents/` maps to `/agents` on GitHub
-Pages, with file paths preserved: `data/skills/code-review/SKILL.md` is served
-at `/skills/code-review/SKILL.md`. Beside these, the build zips each skill
+Pages, with file paths preserved: `data/skills/<slug>/SKILL.md` is served
+at `/skills/<slug>/SKILL.md`. Beside these, the build zips each skill
 directory into `/skills/<slug>.skill` — the one file an entoli client fetches
 to install the whole entry (see [Build outputs](#build-outputs)). Remote
 entries publish no content: their manifests map to `/ext/<section>/index.json`
@@ -188,7 +189,7 @@ from the entries' frontmatter, keyed by slug:
 
 ```json
 {
-  "code-review": {
+  "release-notes": {
     "name": "...",
     "description": "...",
     "author": "...",
