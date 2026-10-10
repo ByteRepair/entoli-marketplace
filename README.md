@@ -142,7 +142,7 @@ differs:
 
 - `metadata.author` is not required — the source repository's contributors
   (the ten with the most contributions) publish as the entry's authors,
-  comma-joined.
+  joined with ", ".
 - `README.md` is optional (no marketplace page is built for remote entries).
 - Tags are prefixed with `external`.
 
@@ -172,9 +172,13 @@ _site/skills/<slug>.skill        zip of the whole skill directory, one per
                                  through the app's .skill import
 _site/<section>/index.json       frontmatter of every entry, keyed by slug;
                                  remote entries joined in under their keys
-_site/ext/<section>/index.json   every remote entry manifest's location data:
-                                 {slug: {repo, ref?, path}}, ref present
-                                 only when pinned
+_site/ext/<section>/index.json   one record per remote entry, keyed by its
+                                 published key: {key: {repo, ref?, dir,
+                                 files}} — dir is the entry directory's
+                                 repository-relative path and files the
+                                 blob names under it, resolved by the build
+                                 so a client fetches without a listing; ref
+                                 present only when pinned
 ```
 
 ### index.json

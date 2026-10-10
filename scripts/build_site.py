@@ -12,9 +12,9 @@
   remote entries join the section index.json — name and description from
   the fetched frontmatter, authors from the source repo's contributors,
   version from the frontmatter, tags = "external", the manifest's tags,
-  then the frontmatter's own — and their repository/ref/path location data
-  lands in _site/ext/<section>/index.json. Remote content is not mirrored:
-  clients follow the location data.
+  then the frontmatter's own — and each entry's source location (with its
+  full file list, per entry) lands in _site/ext/<section>/index.json.
+  Remote content is not mirrored: clients follow the location data.
 
 The build validates everything first (same rules as CI) and refuses to
 produce output for invalid data.
@@ -76,9 +76,24 @@ def ext_meta(entry, result) -> dict:
     return meta
 
 
-def ext_location(result) -> dict:
-    """The location data one manifest publishes to _site/ext/<section>/."""
-    location = {"repo": result.repo, "path": result.path}
+def ext_location(result, entry) -> dict:
+    """One remote entry's location record in _site/ext/<section>/.
+
+    Clients fetch an entry's files straight from its source repository, so the
+    record carries the whole entry directory — its path in the repository and
+    every blob under it — resolved by this build rather than derived by the
+        client; with the file list a client needs no listings or API calls.
+    """
+    prefix = f"{entry.dir_path}/"
+    location = {
+        "repo": result.repo,
+        "dir": entry.dir_path,
+        "files": [
+            path[len(prefix) :]
+            for path in sorted(result.tree)
+            if path.startswith(prefix)
+        ],
+    }
     if result.ref:
         location["ref"] = result.ref
     return location
@@ -127,7 +142,7 @@ def build() -> int:
             warnings.extend(result.exclusion_warnings(f"ext/{section}/{slug}"))
             for entry in result.entries:
                 meta_all[section][entry.key] = ext_meta(entry, result)
-            locations[section][slug] = ext_location(result)
+                locations[section][entry.key] = ext_location(result, entry)
 
     if errors:
         print(f"build failed: {len(errors)} validation error(s):")
