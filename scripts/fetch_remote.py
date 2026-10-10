@@ -21,7 +21,7 @@ The fetched entry files run through the same frontmatter checks as data/
 entries (the slug is the remote directory's own name, agent extras, PNG
 magic), so a green check means the marketplace would accept the entry as
 if it lived here. The repository's top contributors (the ten with the most
-contributions) become the entry's authors, comma-joined.
+contributions) become the entry's authors, joined with ", ".
 
 Standard library only besides validate (mirrored rules, no extra deps);
 GITHUB_TOKEN is used for API calls when set.
@@ -193,14 +193,14 @@ def list_tree(repo: str, sha: str, token: str | None) -> set[str]:
 
 
 def fetch_contributors(repo: str, token: str | None) -> str | None:
-    """The repository's top contributors, comma-joined; None when none."""
+    """The repository's top contributors, space-comma-joined; None when none."""
     data = _get_json(_api(repo, "contributors?per_page=100"), token)
     logins = [
         c["login"]
         for c in data
         if isinstance(c, dict) and isinstance(c.get("login"), str)
     ][:CONTRIBUTOR_LIMIT]
-    return ",".join(logins) or None
+    return ", ".join(logins) or None
 
 
 # --- manifest parsing and static checks ---------------------------------------
