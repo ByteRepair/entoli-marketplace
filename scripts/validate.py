@@ -391,9 +391,10 @@ def check_slug_shape(base: Path, slug: str) -> list[str]:
     return []
 
 
-def validate_entry(section: str, slug: str) -> list[str]:
-    """Validate a local entry directory under the data root."""
-    base = DATA_ROOT / section / slug
+def validate_entry(section: str, slug: str, root: Path = DATA_ROOT) -> list[str]:
+    """Validate a local entry directory under [root] — the data root, or a
+    build-time root staged outside the repo (the release importer's)."""
+    base = root / section / slug
     errors: list[str] = []
     errors.extend(check_slug_shape(base, slug))
 

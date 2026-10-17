@@ -151,6 +151,20 @@ An unpinned `ref` drifts with the source repository; validation and deploys
 re-check the current state each run, so upstream breakage fails this repo's
 CI. Pin a tag or commit SHA to decouple.
 
+## Skills releases
+
+`_release/skills/` is generated at build time: `build_site.py` runs
+`scripts/import_release.py`, which imports the latest release tag of
+`ByteRepair/skills` (or the one `--tag vX.Y.Z` names) — each skill
+directory copied verbatim, with the `metadata:` block added (author
+`Entoli`, the tag's version, tags `internal`) and a README.md, and
+`skill-creator` skipped, entoli's presets bundling their own copy. The
+stage is wiped and re-fetched every build and never committed.
+
+```sh
+python3 scripts/import_release.py
+```
+
 ## Publishing
 
 `data/skills/` maps to `/skills` and `data/agents/` maps to `/agents` on GitHub

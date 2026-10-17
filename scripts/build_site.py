@@ -30,14 +30,15 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import fetch_remote
+import import_release
 import validate
 
 SITE = ROOT / "_site"
 EXTERNAL_TAG = "external"
 
 
-def entry_meta(section: str, slug: str) -> dict:
-    base = validate.DATA_ROOT / section / slug
+def entry_meta(section: str, slug: str, root: Path) -> dict:
+    base = root / section / slug
     source = (base / validate.ENTRY_KINDS[section]).read_text("utf-8")
     scalars, metadata, _ = validate.parse_frontmatter(source)
     meta = {
@@ -116,19 +117,29 @@ def build() -> int:
     errors = []
     warnings: list[str] = []
     meta_all = {}
-    local_slugs: dict[str, list[str]] = {}
+    local_slugs: dict[str, list[tuple[Path, str]]] = {}
     locations: dict[str, dict[str, dict]] = {}
+
+    # The preprocessing step: the skills the entoli presets stopped bundling
+    # are fetched and staged by every build; a fetch failure serves nothing.
+    import_release.stage_release()
 
     for section in validate.ENTRY_KINDS:
         meta_all[section] = {}
         local_slugs[section] = []
-        for slug in validate.discover_slugs(section, validate.DATA_ROOT):
-            entry_errors = validate.validate_entry(section, slug)
-            if entry_errors:
-                errors.extend(entry_errors)
-                continue
-            meta_all[section][slug] = entry_meta(section, slug)
-            local_slugs[section].append(slug)
+        # Local entries: the authored data root, and for skills the release
+        # stage beside it — staged entries are validated, indexed, served
+        # and packaged exactly like the authored ones.
+        for root in [validate.DATA_ROOT] + (
+            [import_release.STAGED_ROOT] if section == "skills" else []
+        ):
+            for slug in validate.discover_slugs(section, root):
+                entry_errors = validate.validate_entry(section, slug, root)
+                if entry_errors:
+                    errors.extend(entry_errors)
+                    continue
+                meta_all[section][slug] = entry_meta(section, slug, root)
+                local_slugs[section].append((root, slug))
 
         locations[section] = {}
         for slug in validate.discover_slugs(section, validate.EXT_ROOT):
@@ -160,8 +171,8 @@ def build() -> int:
         # The section index exists even when the section is empty; the
         # directory must be there before any entry copy or index write.
         (SITE / section).mkdir(parents=True, exist_ok=True)
-        for slug in local_slugs[section]:
-            src = validate.DATA_ROOT / section / slug
+        for root, slug in local_slugs[section]:
+            src = root / section / slug
             shutil.copytree(src, SITE / section / slug)
             if section == "skills":
                 package_skill(src, SITE / section / f"{slug}.skill")
