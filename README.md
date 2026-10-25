@@ -83,7 +83,7 @@ metadata:
 | `name`        | SKILL.md | skills   | matches the slug                   |
 | `description` | scalars  | yes      | non-empty; <=1024 chars for skills |
 | `author`      | metadata | yes      | non-empty string                   |
-| `version`     | metadata | no       | valid SemVer string                |
+| `version`     | metadata | no       | valid SemVer string (`x.y.z`)      |
 | `tags`        | metadata | no       | comma-separated; unique            |
 
 Rules that follow from the frontmatter grammar (real YAML, as the Agent
@@ -146,6 +146,9 @@ differs:
   joined with ", ".
 - `README.md` is optional (no marketplace page is built for remote entries).
 - Tags are prefixed with `external`.
+- `metadata.version` need not be SemVer (the spec leaves metadata values
+  free-form). A numeric version is padded to `x.y.z` (`49` → `49.0.0`,
+  `v2.1` → `2.1.0`); one with no number publishes without a version.
 
 An unpinned `ref` drifts with the source repository; validation and deploys
 re-check the current state each run, so upstream breakage fails this repo's
@@ -221,8 +224,9 @@ Remote entries join the section index under their key (`<slug>` or
 `<slug>/<sub>`) with the same record shape; the differences follow
 [Remote entry rules](#remote-entry-rules): `author` is the comma-joined
 contributor logins, `name` comes from the remote frontmatter (falling back to
-the key), `version` from the frontmatter, and `tags` is `external` plus the
-manifest's tags plus the remote frontmatter's own, deduplicated in that order.
+the key), `version` from the frontmatter normalised to SemVer, and `tags` is
+`external` plus the manifest's tags plus the remote frontmatter's own,
+deduplicated in that order.
 
 ### Previewing locally
 

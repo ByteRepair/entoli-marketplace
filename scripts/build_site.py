@@ -11,7 +11,7 @@
 - resolves ext/<section>/<slug>/index.toml manifests (see fetch_remote.py):
   remote entries join the section index.json — name and description from
   the fetched frontmatter, authors from the source repo's contributors,
-  version from the frontmatter, tags = "external", the manifest's tags,
+  version from the frontmatter (normalised to SemVer), tags = "external", the manifest's tags,
   then the frontmatter's own — and each entry's source location (with its
   full file list, per entry) lands in _site/ext/<section>/index.json.
   Remote content is not mirrored: clients follow the location data.
@@ -70,7 +70,7 @@ def ext_meta(entry, result) -> dict:
         "description": scalars.get("description", "")[: validate.DESCRIPTION_MAX],
         "author": result.authors or "",
     }
-    if version := metadata.get("version"):
+    if version := validate.ext_version(metadata.get("version")):
         meta["version"] = version
     if tags:
         meta["tags"] = list(dict.fromkeys(tags))
