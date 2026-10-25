@@ -56,6 +56,7 @@ SEMVER_RE = re.compile(
     r"(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
     r"(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"
 )
+EXT_VERSION_RE = re.compile(r"v?(\d+)(?:\.(\d+))?(?:\.(\d+))?", re.IGNORECASE)
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
 ENTRY_ROOTS = ("data", "ext")
@@ -231,19 +232,33 @@ def _check_meta_fields(path: Path, metadata: dict[str, str]) -> list[str]:
             f"{path}: metadata carries no usable 'author' (indented "
             f"author: <name> under metadata:)"
         )
-    errors.extend(_check_version_and_tags(path, metadata))
-    return errors
-
-
-def _check_version_and_tags(path: Path, metadata: dict[str, str]) -> list[str]:
-    """The metadata parts that apply to remote entries too (no author rule)."""
-    errors = []
     version = metadata.get("version")
     if version is not None and not SEMVER_RE.fullmatch(version):
         errors.append(
             f"{path}: metadata 'version' must be a SemVer string like "
             f"'1.2.0' (got {version!r})"
         )
+    errors.extend(_check_tags(path, metadata))
+    return errors
+
+
+def ext_version(version: str | None) -> str | None:
+    """A remote entry's version as SemVer, or None when it carries no number.
+
+    The spec leaves metadata values free-form, so sources like "49" or "v2.1"
+    are padded to x.y.z and anything non-numeric publishes without a version.
+    """
+    if version is None or SEMVER_RE.fullmatch(version):
+        return version
+    match = EXT_VERSION_RE.fullmatch(version.strip())
+    if match is None:
+        return None
+    return ".".join(str(int(part or 0)) for part in match.groups())
+
+
+def _check_tags(path: Path, metadata: dict[str, str]) -> list[str]:
+    """The metadata parts that apply to remote entries too."""
+    errors = []
     tags = metadata.get("tags")
     if tags is not None:
         stripped = tags.strip()
@@ -321,9 +336,9 @@ def check_entry_frontmatter(
     if require_author:
         errors.extend(_check_meta_fields(path, metadata))
     else:
-        # Marketplace-only fields stay the source's choice; version is still
-        # SemVer-checked when present, tags are still comma-separated.
-        errors.extend(_check_version_and_tags(path, metadata))
+        # Marketplace-only fields stay the source's choice: version is
+        # normalised at build (ext_version), tags are still comma-separated.
+        errors.extend(_check_tags(path, metadata))
     return errors
 
 
