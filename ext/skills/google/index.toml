@@ -1,3 +1,5 @@
 repo = "google/skills"
 ref = "main"
 path = "skills"
+name = "Google"
+summary = "Google's own skills: Cloud, GCS, BigQuery, Workspace and the rest of the stack."

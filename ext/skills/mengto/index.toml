@@ -1,3 +1,5 @@
 repo = "MengTo/Skills"
 ref = "main"
 path = "agent-skills"
+name = "MengTo"
+summary = "Design and front-end skills from MengTo's agent-skills collection."
