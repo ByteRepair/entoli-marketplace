@@ -5,6 +5,7 @@ on:
     paths:
       - "data/**"
       - "ext/**"
+      - "collections/**"
       - ".github/workflows/validate.yml"
       - "scripts/**"
       - "tool/**"
@@ -57,6 +58,10 @@ jobs:
 
       - name: Unit tests
         run: python3 -m unittest discover -s scripts -p "test_*.py"
+
+      # Members staged from a skills release are known only once staged.
+      - name: Check collections
+        run: python3 scripts/import_release.py && python3 scripts/collection_files.py
 
       - name: Collect touched entries
         run: |

@@ -33,6 +33,9 @@ ext/
     index.toml      remote entry manifest (see Remote entries)
   agents/<slug>/
     index.toml      remote entry manifest
+collections/
+  skills.toml       the collections the app groups entries under
+  agents.toml       (see Collections)
 ```
 
 The body of `SKILL.md` holds the instructions entoli loads; the body of
@@ -124,7 +127,8 @@ remote entry's own frontmatter, so nothing in `ext/` can go stale against its
 source. `tags` is appended to the tags the remote frontmatter carries. `name`
 and `summary` describe the collection, not an entry: a manifest whose path
 publishes `<slug>/<sub>` entries is shown in the app as one collection under
-that name (the slug where `name` is absent).
+that name (the slug where `name` is absent). Other entries are grouped in
+`collections/` (see [Collections](#collections)).
 
 The manifest path matches one of two shapes:
 
@@ -157,6 +161,27 @@ differs:
 An unpinned `ref` drifts with the source repository; validation and deploys
 re-check the current state each run, so upstream breakage fails this repo's
 CI. Pin a tag or commit SHA to decouple.
+
+## Collections
+
+The app lists a section as collections, then the entries in none. An ext
+manifest publishing `<slug>/<sub>` entries is a collection of its own entries.
+Every other grouping is declared in `collections/<section>.toml`, one table per
+collection:
+
+```toml
+[design]
+name = "Design"                   # required, 1-64 chars
+summary = "Art, themes and looks." # optional, 1-160 chars
+members = ["canvas-design"]       # required: the section's index keys
+```
+
+A member is any entry of the section (local, staged from a release, or a
+single-entry ext manifest) by its index key. An entry sits in one collection
+at most, a manifest's own entries are its collection's alone, and a declared
+slug may not be an ext manifest's. `scripts/collection_files.py` checks the
+files against the slugs it can see offline; the build checks every member
+against the finished index.
 
 ## Skills releases
 
@@ -201,11 +226,11 @@ _site/ext/<section>/index.json   one record per remote entry, keyed by its
                                  blob names under it, resolved by the build
                                  so a client fetches without a listing; ref
                                  present only when pinned
-_site/ext/<section>/collections.json
-                                 one record per manifest publishing
-                                 <slug>/<sub> entries, keyed by slug:
-                                 {slug: {name, summary}}; the app groups
-                                 <slug>/* entries under it
+_site/<section>/collections.json every collection, keyed by slug:
+                                 {slug: {name, summary, members}} — each
+                                 manifest publishing <slug>/<sub> entries
+                                 and each collections/<section>.toml table;
+                                 members are index keys
 ```
 
 ### index.json

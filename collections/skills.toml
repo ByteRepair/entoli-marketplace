@@ -1,0 +1,26 @@
+[design]
+name = "Design"
+summary = "Generative art, posters, themes, front-end looks, Slack GIFs and Bot Avatars."
+members = [
+  "algorithmic-art",
+  "bot-avatar-creator",
+  "canvas-design",
+  "frontend-design",
+  "slack-gif-creator",
+  "theme-factory",
+]
+
+[engineering]
+name = "Engineering"
+summary = "MCP servers, multi-part web artifacts, testing local web apps, and reverse engineering."
+members = [
+  "mcp-builder",
+  "reverse-engineer-anything",
+  "web-artifacts-builder",
+  "webapp-testing",
+]
+
+[writing]
+name = "Writing"
+summary = "Status reports, newsletters and other internal updates, and a second look at advice."
+members = ["discernment-nudge", "internal-comms"]

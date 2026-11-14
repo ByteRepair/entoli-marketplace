@@ -14,8 +14,9 @@
   version from the frontmatter (normalised to SemVer), tags = "external", the manifest's tags,
   then the frontmatter's own — and each entry's source location (with its
   full file list, per entry) lands in _site/ext/<section>/index.json.
-  A manifest publishing <slug>/<sub> entries is a collection: its name and
-  summary land in _site/ext/<section>/collections.json, keyed by slug.
+- writes _site/<section>/collections.json: each manifest publishing
+  <slug>/<sub> entries, and the collections/<section>.toml groups (see
+  collection_files.py), as {slug: {name, summary, members}}
   Remote content is not mirrored: clients follow the location data.
 
 The build validates everything first (same rules as CI) and refuses to
@@ -31,6 +32,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import collection_files
 import fetch_remote
 import import_release
 import validate
@@ -106,11 +108,15 @@ def collection_record(result) -> dict | None:
     """The collections.json record for a manifest, or None where it is one entry.
 
     A manifest is a collection when it publishes <slug>/<sub> entries; the
-    app groups those under the slug and shows this name and summary.
+    app groups its members under this name and summary.
     """
     if not any(entry.rel for entry in result.entries):
         return None
-    return {"name": result.name or result.slug, "summary": result.summary or ""}
+    return {
+        "name": result.name or result.slug,
+        "summary": result.summary or "",
+        "members": [entry.key for entry in result.entries],
+    }
 
 
 def package_skill(src: Path, dst: Path) -> None:
@@ -172,6 +178,13 @@ def build() -> int:
             if record := collection_record(result):
                 collections[section][slug] = record
 
+        declared, problems = collection_files.load(section)
+        errors.extend(problems)
+        collections[section], problems = collection_files.merge(
+            section, declared, collections[section], set(meta_all[section])
+        )
+        errors.extend(problems)
+
     if errors:
         print(f"build failed: {len(errors)} validation error(s):")
         for error in errors:
@@ -193,21 +206,21 @@ def build() -> int:
             shutil.copytree(src, SITE / section / slug)
             if section == "skills":
                 package_skill(src, SITE / section / f"{slug}.skill")
-        (SITE / section / "index.json").write_text(
-            json.dumps(meta_all[section], indent=2, ensure_ascii=False) + "\n",
-            encoding="utf-8",
-        )
-
-    for section in validate.ENTRY_KINDS:
-        (SITE / "ext" / section).mkdir(parents=True)
         for name, data in (
-            ("index.json", locations[section]),
+            ("index.json", meta_all[section]),
             ("collections.json", collections[section]),
         ):
-            (SITE / "ext" / section / name).write_text(
+            (SITE / section / name).write_text(
                 json.dumps(data, indent=2, ensure_ascii=False) + "\n",
                 encoding="utf-8",
             )
+
+    for section in validate.ENTRY_KINDS:
+        (SITE / "ext" / section).mkdir(parents=True)
+        (SITE / "ext" / section / "index.json").write_text(
+            json.dumps(locations[section], indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
 
     total = sum(len(v) for v in meta_all.values())
     print(
