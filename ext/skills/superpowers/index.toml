@@ -1,3 +1,5 @@
 repo = "obra/superpowers"
 ref = "main"
 path = "skills"
+name = "Superpowers"
+summary = "Obra's engineering workflow skills: brainstorming, planning, review."

@@ -14,6 +14,8 @@
   version from the frontmatter (normalised to SemVer), tags = "external", the manifest's tags,
   then the frontmatter's own — and each entry's source location (with its
   full file list, per entry) lands in _site/ext/<section>/index.json.
+  A manifest publishing <slug>/<sub> entries is a collection: its name and
+  summary land in _site/ext/<section>/collections.json, keyed by slug.
   Remote content is not mirrored: clients follow the location data.
 
 The build validates everything first (same rules as CI) and refuses to
@@ -100,6 +102,17 @@ def ext_location(result, entry) -> dict:
     return location
 
 
+def collection_record(result) -> dict | None:
+    """The collections.json record for a manifest, or None where it is one entry.
+
+    A manifest is a collection when it publishes <slug>/<sub> entries; the
+    app groups those under the slug and shows this name and summary.
+    """
+    if not any(entry.rel for entry in result.entries):
+        return None
+    return {"name": result.name or result.slug, "summary": result.summary or ""}
+
+
 def package_skill(src: Path, dst: Path) -> None:
     """Zip [src] (a skill directory) into [dst] as a `.skill`.
 
@@ -119,6 +132,7 @@ def build() -> int:
     meta_all = {}
     local_slugs: dict[str, list[tuple[Path, str]]] = {}
     locations: dict[str, dict[str, dict]] = {}
+    collections: dict[str, dict[str, dict]] = {}
 
     # The preprocessing step: the skills the entoli presets stopped bundling
     # are fetched and staged by every build; a fetch failure serves nothing.
@@ -142,6 +156,7 @@ def build() -> int:
                 local_slugs[section].append((root, slug))
 
         locations[section] = {}
+        collections[section] = {}
         for slug in validate.discover_slugs(section, validate.EXT_ROOT):
             result, ext_errors = fetch_remote.fetch_result(
                 validate.EXT_ROOT, section, slug
@@ -154,6 +169,8 @@ def build() -> int:
             for entry in result.entries:
                 meta_all[section][entry.key] = ext_meta(entry, result)
                 locations[section][entry.key] = ext_location(result, entry)
+            if record := collection_record(result):
+                collections[section][slug] = record
 
     if errors:
         print(f"build failed: {len(errors)} validation error(s):")
@@ -183,10 +200,14 @@ def build() -> int:
 
     for section in validate.ENTRY_KINDS:
         (SITE / "ext" / section).mkdir(parents=True)
-        (SITE / "ext" / section / "index.json").write_text(
-            json.dumps(locations[section], indent=2, ensure_ascii=False) + "\n",
-            encoding="utf-8",
-        )
+        for name, data in (
+            ("index.json", locations[section]),
+            ("collections.json", collections[section]),
+        ):
+            (SITE / "ext" / section / name).write_text(
+                json.dumps(data, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
 
     total = sum(len(v) for v in meta_all.values())
     print(

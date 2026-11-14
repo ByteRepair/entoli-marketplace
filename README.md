@@ -115,12 +115,16 @@ ref  = "v1.2.0"              # optional: tag, branch, or commit SHA; the
                              # repository's default branch when omitted
 path = "skills/algorithmic-art"  # required: subtree root inside the repo
 tags = "ai, sdk"             # optional: extra marketplace-side tags
+name = "Anthropic"           # optional: the collection's name, 1-64 chars
+summary = "..."              # optional: the collection's summary, 1-160 chars
 ```
 
-The manifest carries location only — no metadata fields: `version` and friends
-come from the remote entry's own frontmatter, so nothing in `ext/` can go
-stale against its source. `tags` is the one marketplace-side extra; it is
-appended to the tags the remote frontmatter carries.
+The manifest carries no entry metadata: `version` and friends come from the
+remote entry's own frontmatter, so nothing in `ext/` can go stale against its
+source. `tags` is appended to the tags the remote frontmatter carries. `name`
+and `summary` describe the collection, not an entry: a manifest whose path
+publishes `<slug>/<sub>` entries is shown in the app as one collection under
+that name (the slug where `name` is absent).
 
 The manifest path matches one of two shapes:
 
@@ -197,6 +201,11 @@ _site/ext/<section>/index.json   one record per remote entry, keyed by its
                                  blob names under it, resolved by the build
                                  so a client fetches without a listing; ref
                                  present only when pinned
+_site/ext/<section>/collections.json
+                                 one record per manifest publishing
+                                 <slug>/<sub> entries, keyed by slug:
+                                 {slug: {name, summary}}; the app groups
+                                 <slug>/* entries under it
 ```
 
 ### index.json

@@ -1,3 +1,5 @@
 repo = "DietrichGebert/ponytail"
 ref = "main"
 path = "skills"
+name = "Ponytail"
+summary = "Code review, refactoring and release craft."

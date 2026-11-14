@@ -45,7 +45,7 @@ the fork's `RELEASE_EXCLUDED`, not skipped here.
   (agents) with frontmatter, plus `README.md`. Frontmatter-only metadata;
   there is no index file.
 - `ext/<kind>/<slug>/` are remote entries: a single `index.toml` manifest
-  (keys `repo`, `ref`, `path`, `tags`) pointing at content in another GitHub
+  (keys `repo`, `ref`, `path`, `tags`, `name`, `summary`) pointing at content in another GitHub
   repository — nothing else sits in the directory. See README "Remote
   entries".
 
@@ -75,10 +75,11 @@ agents.
   are limited to the Agent Skills spec set.
 - Agent `PROMPT.md`: only `description` and `metadata` at the top level;
   never a `name` key — an agent's name is its file name.
-- Ext manifests declare location only (`repo`, `ref`, `path`, `tags`): no
-  metadata fields, since `version` etc. come from the fetched entry's own
-  frontmatter so nothing goes stale against its source. `tags` are optional
-  marketplace-side extras appended to the source's tags.
+- Ext manifests declare location (`repo`, `ref`, `path`, `tags`) and
+  optionally the collection's `name` and `summary`: no entry metadata, since
+  `version` etc. come from the fetched entry's own frontmatter so nothing goes
+  stale against its source. `tags` are optional marketplace-side extras
+  appended to the source's tags.
 - CI runs entoli's Dart CLI (`entoli/tool/validate_marketplace.dart`) as
   the validation source of truth, and `tool/frontmatter_diff_test.dart`
   over the same fixtures with `scripts/validate.py`, the Python mirror of

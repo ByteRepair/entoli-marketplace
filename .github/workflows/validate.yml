@@ -55,6 +55,9 @@ jobs:
       - name: Install PyYAML
         run: python3 -m pip install --disable-pip-version-check pyyaml || pip install --disable-pip-version-check pyyaml
 
+      - name: Unit tests
+        run: python3 -m unittest discover -s scripts -p "test_*.py"
+
       - name: Collect touched entries
         run: |
           git fetch origin "${{ github.base_ref }}" "${{ github.event.pull_request.head.sha }}"

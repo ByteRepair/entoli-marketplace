@@ -11,6 +11,10 @@ repository:
     path = "skills/x"     required: subtree root inside that repository
     tags = "a, b"         optional: marketplace-side tags, appended to the
                           tags the entry's own frontmatter carries
+    name = "Google"       optional: the collection's display name, where the
+                          path publishes sub-entries (1-64 chars)
+    summary = "..."       optional: the collection's one-line summary
+                          (1-160 chars)
 
 The path may itself be an entry directory (holding SKILL.md/PROMPT.md,
 published as <slug>); every directory below it that holds an entry file is
@@ -42,7 +46,9 @@ import validate
 API = "https://api.github.com"
 RAW = "https://raw.githubusercontent.com"
 MANIFEST_NAME = "index.toml"
-MANIFEST_KEYS = ("repo", "ref", "path", "tags")
+MANIFEST_KEYS = ("repo", "ref", "path", "tags", "name", "summary")
+COLLECTION_NAME_MAX = 64
+COLLECTION_SUMMARY_MAX = 160
 REPO_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9][A-Za-z0-9_.-]*$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 CONTRIBUTOR_LIMIT = 10
@@ -95,6 +101,8 @@ class RemoteResult:
     tags: str | None
     entries: list[RemoteEntry]
     authors: str | None
+    name: str | None = None
+    summary: str | None = None
     tree: frozenset[str] = frozenset()  # all blob paths at the pinned commit
     excluded: int = 0  # entries dropped for breaking content rules
     exclude_reasons: list[str] = field(default_factory=list)
@@ -247,6 +255,12 @@ def check_manifest(where: str, manifest: dict[str, str]) -> list[str]:
             errors.append(f"{where}: manifest 'tags' is empty")
         elif len(parts) != len(set(parts)):
             errors.append(f'{where}: manifest "tags" contains duplicates: {parts}')
+    for key, limit in (
+        ("name", COLLECTION_NAME_MAX),
+        ("summary", COLLECTION_SUMMARY_MAX),
+    ):
+        if key in manifest and not 1 <= len(manifest[key].strip()) <= limit:
+            errors.append(f'{where}: manifest "{key}" must be 1-{limit} characters')
     return errors
 
 
@@ -392,6 +406,8 @@ def fetch_result(
             path=manifest["path"].strip("/"),
             tags=manifest.get("tags", "").strip() or None,
             entries=entries,
+            name=manifest.get("name", "").strip() or None,
+            summary=manifest.get("summary", "").strip() or None,
             authors=fetch_contributors(repo, token),
             tree=frozenset(tree),
         )
