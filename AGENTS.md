@@ -25,6 +25,7 @@ the fork's `RELEASE_EXCLUDED`, not skipped here.
 ## Commands
 
 - Validate everything: `python3 scripts/validate.py`
+- Check the collections: `python3 scripts/collection_files.py`
 - Validate one entry: `python3 scripts/validate.py --entry data/skills/<slug>`
 - Validate with entoli's own rules (source of truth; needs a sibling
   `../entoli` checkout with `flutter pub get` run once):
@@ -48,6 +49,10 @@ the fork's `RELEASE_EXCLUDED`, not skipped here.
   (keys `repo`, `ref`, `path`, `tags`, `name`, `summary`) pointing at content in another GitHub
   repository — nothing else sits in the directory. See README "Remote
   entries".
+- `collections/<kind>.toml` groups entries the app shows together, by
+  index key; an ext manifest with sub-entries is a collection already. An
+  entry added to a section belongs in a collection unless it is one of a
+  kind. See README "Collections".
 
 ## Agent prompt structure
 

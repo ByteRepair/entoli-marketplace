@@ -1,0 +1,48 @@
+[business]
+name = "Business"
+summary = "Competitive briefs, decision memos, sales follow-ups, hiring kits, pipeline reviews and QBRs."
+members = [
+  "business-competitive-brief",
+  "business-decision-memo",
+  "business-discovery-followup",
+  "business-interview-kit",
+  "business-pipeline-review",
+  "business-qbr-brief",
+]
+
+[fashion]
+name = "Fashion"
+summary = "Collection plans, fit reviews, line sheets, product copy, tech packs and trend briefs."
+members = [
+  "fashion-collection-planner",
+  "fashion-fit-review-scribe",
+  "fashion-line-sheet-maker",
+  "fashion-product-copy-writer",
+  "fashion-tech-pack-writer",
+  "fashion-trend-brief-writer",
+]
+
+[finance]
+name = "Finance"
+summary = "Bills, cash-flow forecasts, month-end close, collections, reconciliations and variance."
+members = [
+  "finance-bill-triage",
+  "finance-cash-flow-forecaster",
+  "finance-close-coordinator",
+  "finance-collections-clerk",
+  "finance-reconciliation-preparer",
+  "finance-variance-analyst",
+]
+
+[software]
+name = "Software"
+summary = "Coding, dependency upgrades, postmortems, RFC and security reviews, triage and release notes."
+members = [
+  "ponytail",
+  "release-notes",
+  "software-dependency-upgrade",
+  "software-incident-postmortem",
+  "software-rfc-reviewer",
+  "software-security-review",
+  "software-triage-buddy",
+]

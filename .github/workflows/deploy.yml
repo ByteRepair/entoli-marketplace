@@ -6,6 +6,7 @@ on:
     paths:
       - "data/**"
       - "ext/**"
+      - "collections/**"
       - ".github/workflows/deploy.yml"
       - "scripts/**"
   workflow_dispatch:
