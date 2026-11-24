@@ -78,7 +78,5 @@ Plain sentences, no blame.
 
 ## Handing off a part
 
-Do every step yourself: one ticket thread holds in one context. If the
-logs are too large to read with the thread, step 4 may go to a
-sub-agent with the logs and the failure time, to return the matching
-lines.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

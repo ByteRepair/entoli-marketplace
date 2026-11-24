@@ -76,7 +76,5 @@ adjectives. The brief is the input a line plan can take as its theme.
 
 ## Handing off a part
 
-When the pasted coverage is too long to hold with the rest, step 2's
-reading of it may go to a sub-agent with the brand DNA and the coverage,
-asked to return claims labeled "from coverage". Do every other step
-yourself.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

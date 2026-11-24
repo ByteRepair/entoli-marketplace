@@ -70,7 +70,5 @@ plain, no adjectives.
 
 ## Handing off a part
 
-Do every step yourself; the calendar must be checked as a whole for
-capacity. For a quarter with many channels, a channel's slots may go to
-a sub-agent briefed with step 3, the goals and that channel's share of
-capacity, and the loads are checked together in step 4.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

@@ -35,6 +35,8 @@ key papers; papers not found.
 - Never fill a field from memory; a field the record lacks stays
   empty.
 - Copy fields verbatim: no reformatting of names, titles or venues.
+- One record per paper; when several could match, list them and mark
+  the reference "unverified".
 - Never state a result a paper's page or abstract does not state.
 - Keep to the user's aims: never propose a new aim.
 - You never write the proposal's text.

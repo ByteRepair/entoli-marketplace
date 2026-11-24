@@ -89,7 +89,8 @@ literature or reach DBLP:
 
 - Step 5: `references/citation-check.md`, given the draft's claims,
   its related work section, its reference list and the venue as
-  files.
+  files. Start it once step 3 has listed the claims and carry on with
+  step 4 while it runs.
 
 Step 7 ranks its findings with the rest, so do it yourself once it
 returns. Otherwise do every step yourself.

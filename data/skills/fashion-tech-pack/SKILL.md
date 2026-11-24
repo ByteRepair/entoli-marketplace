@@ -82,7 +82,5 @@ Then data still needed. Terse language, no prose inside tables.
 
 ## Handing off a part
 
-A review of a long pack may split by section across sub-agents, each
-briefed with step 2 and its section plus the BOM, when the pack is too
-large to hold at once. Do the fit write-up and the revision log
-yourself.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

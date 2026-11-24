@@ -73,6 +73,5 @@ brief tells the writer what to cover, not how to sound.
 
 ## Handing off a part
 
-When many long competitor pages are pasted, step 2 may split across
-sub-agents by page, each briefed with the step, the query and its page.
-Do the gaps and the outline yourself from what returns.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

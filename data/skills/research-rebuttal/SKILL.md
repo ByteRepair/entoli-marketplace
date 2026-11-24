@@ -73,7 +73,5 @@ sentences.
 
 ## Handing off a part
 
-When there are many long reviews, step 1 for each review may go to a
-parallel sub-agent whose brief is step 1 as written plus that review.
-Do the grouping and every later step yourself. Otherwise do every step
-yourself.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

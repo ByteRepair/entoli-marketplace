@@ -74,7 +74,5 @@ needed. Plain sentences, past tense for agreed facts.
 
 ## Handing off a part
 
-A long transcript may go to a sub-agent for step 1 when it is too large
-to hold with the rest; brief it to return the buyer's statements with
-their place in the transcript. Do steps 2 to 4 yourself. Otherwise do
-every step yourself.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

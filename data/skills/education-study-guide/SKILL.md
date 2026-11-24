@@ -80,7 +80,5 @@ sentences.
 
 ## Handing off a part
 
-Do every step yourself unless the notes are too large to hold with the
-rest. Then step 4 may go to sub-agents, one per group of topics, each
-briefed with the step, those topics and the notes for them. Check their
-questions and answers against the notes before you use them.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

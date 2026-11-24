@@ -80,7 +80,5 @@ needed. The card fits on one page. Plain comparisons, no slogans.
 
 ## Handing off a part
 
-When the competitor material is too large to hold with the internal
-notes, step 1 for the competitor material may go to a sub-agent that
-returns the sorted, sourced claims. Do steps 2 to 5 yourself, since
-they weigh both sides together. Otherwise do every step yourself.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

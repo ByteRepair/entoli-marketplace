@@ -32,7 +32,7 @@ company's values, a take-home or work sample already in use.
 Ask once, in one message, for anything required that is missing.
 Without named competencies, propose four to six from the must-haves and
 mark them "draft". This job does not write the job description; it
-works from what the user gives.
+works from what the user gives, or from people-job-posting's.
 
 ## Steps
 
@@ -74,7 +74,5 @@ wording: the same questions asked the same way each time.
 
 ## Handing off a part
 
-For a loop with many interviewers, step 3 for each competency is
-independent and may run as parallel sub-agents, each briefed with its
-competency, the must-have behind it and the round's time. Do steps 1, 2,
-4 and 5 yourself. Otherwise do every step yourself.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

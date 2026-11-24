@@ -35,7 +35,7 @@ ext/
     index.toml      remote entry manifest
 collections/
   skills.toml       the collections the app groups entries under
-  agents.toml       (see Collections)
+  agents.toml       optional, the same for agents (see Collections)
 ```
 
 The body of `SKILL.md` holds the instructions entoli loads; the body of
@@ -74,8 +74,9 @@ marketplace agent.
 
 ### Make an agent when
 
-- **It needs something a loaded skill cannot give**: today, nothing
-  qualifies, so the marketplace ships no local agents.
+- **It needs something a loaded skill cannot give**, such as its own
+  tools per role. Agent frontmatter cannot declare tools today, so
+  nothing qualifies and the marketplace ships no local agents.
 
 None of these needs an agent, so none is a reason for one:
 
@@ -87,8 +88,6 @@ None of these needs an agent, so none is a reason for one:
   new chat that Athena answers, and its prompt can name the skill.
 - **Delegating by handle** is a name to call, not a capability; the
   user runs the skill instead.
-- **Different tools per role** would need an agent, but agent
-  frontmatter cannot declare tools today. Revisit this rule if it can.
 
 An agent whose rules only matter while one job runs is a skill with
 extra cost; write the skill instead.
@@ -136,20 +135,6 @@ summary holds and to replace the record with it after answering, or,
 where files cannot be written, to end with the summary for the user to
 save. A record holds facts the next run compares against, never
 personal comments or anything the skill's privacy rules keep out.
-
-### Agent shape
-
-For when an agent qualifies. An agent is named `<domain>-<role>` when
-it belongs to a domain, with that domain's skill prefix, so its handle
-stays unique when a project installs several domains. Its `PROMPT.md` body has these sections:
-
-- **Introduction** (unheaded opening): who it is, what it turns into
-  what, and the action it never takes.
-- **`## Workflow`**: numbered steps for how it works on any request,
-  with the defaults used when a request is bare and the
-  ask-don't-invent rule.
-- **`## Expectations`**: the behavior it keeps on every turn, style,
-  scope limits, and what it flags instead of inventing.
 
 ## Slugs
 

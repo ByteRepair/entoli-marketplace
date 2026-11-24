@@ -80,8 +80,5 @@ needed. Plain words a student at the level can read.
 
 ## Handing off a part
 
-Do every step yourself. When the teacher gives a batch of several
-pieces of work, each piece may go to its own sub-agent, briefed with
-these steps, the task, the rubric and that one piece. Check each answer
-against the success criteria, and compare bands across the batch for
-consistency before you give them.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

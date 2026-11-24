@@ -77,6 +77,5 @@ marketing adjectives about the company or the role.
 
 ## Handing off a part
 
-This job is small enough to do in one pass; do every step yourself. A
-sub-agent is only useful when the user asks for postings for several
-roles at once, one per role, each briefed with its own notes.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

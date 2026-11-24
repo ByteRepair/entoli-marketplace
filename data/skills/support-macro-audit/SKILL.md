@@ -26,7 +26,8 @@ delete or publish a macro in the help desk.
 
 Required: the macros (each with its name and text) and the current
 policies and product notes (features, plan names, UI labels, prices,
-time frames). Optional: the top ticket themes with counts, how often
+time frames). Optional: the top ticket themes with counts (as
+support-weekly-trends reports them), how often
 each macro is used, the brand's tone guide, recent product releases.
 
 Ask once, in one message, for anything required that is missing.
@@ -77,7 +78,5 @@ still needed. Rewrites ready to paste, under 150 words each.
 
 ## Handing off a part
 
-When the library is too large to hold with the policies, steps 1 and 3
-may go to sub-agents in parallel, each with a block of macros and all
-the policies and product notes. Do steps 2, 4 and 5 yourself across the
-whole library. Otherwise do every step yourself.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

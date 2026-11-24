@@ -36,6 +36,8 @@ record's value, source); references not found.
 - Never fill a field from memory; a field the record lacks stays
   empty.
 - Copy fields verbatim: no reformatting of names, titles or venues.
+- One record per paper; when several could match, list them and mark
+  the reference "unverified".
 - Never suggest a paper you have not found a record or page for.
 - Never state a paper's result beyond what its page or abstract says.
 - You never rewrite the draft's text.

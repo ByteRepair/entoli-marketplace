@@ -89,7 +89,5 @@ written, end with the summary for the user to save.
 
 ## Handing off a part
 
-Do every step yourself: the weeks depend on each other, and the material
-is usually small enough to hold at once. If the AP or AR export is only
-reachable through a tool, a sub-agent may fetch and summarize it by due
-week before step 2.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

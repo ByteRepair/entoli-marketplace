@@ -89,7 +89,8 @@ or the web:
 
 - Step 5: `references/citation-check.md`, given the paper's main
   claims and its reference list, in your words, as files. Never write
-  the submission text to its files.
+  the submission text to its files. Start it once step 1 is done and
+  carry on with steps 2 to 4 while it runs.
 
 Step 6 ties questions to weaknesses, so do it yourself once it
 returns. Otherwise do every step yourself.

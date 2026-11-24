@@ -85,8 +85,9 @@ an `explore` sub-agent when only it can reach DBLP or the web:
 
 - Step 1: `references/paper-reader.md`, given the research question
   and its share of the papers (text or links) as files.
-- Step 2: `references/citation-check.md`, given the list of papers
-  read, with each one's title, link, DOI or arXiv ID, as a file.
+- Step 2: `references/citation-check.md`, given the papers' titles,
+  links, DOIs or arXiv IDs from the input, as a file. It needs nothing
+  from step 1, so start it in the same message.
 
 Steps 3 to 7 need every paper's notes, so do them yourself once the
 parts return. Otherwise do every step yourself.

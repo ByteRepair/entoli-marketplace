@@ -76,7 +76,5 @@ style copy is the input product copy can start from.
 
 ## Handing off a part
 
-The follow-up emails may go to a sub-agent when there are many buyers,
-briefed with step 4, each buyer's notes and the cutoff block. Do the
-copy, price list and order papers yourself so the numbers stay in one
-place.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

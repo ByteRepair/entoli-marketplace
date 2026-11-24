@@ -45,6 +45,8 @@ one asset; its own brief is a separate job.
 3. **Assets (launch manager).** The assets the tier needs (release
    note, page update, email, sales one-pager, demo, help article), each
    with owner, due date before launch, and the audience it serves.
+   software-release-notes and support-kb-article write the release
+   note and the help article.
 4. **Launch-day sequence (launch manager).** Time-ordered steps for the
    day, each with owner and the check before it (feature on, page
    live, support briefed).
@@ -75,7 +77,5 @@ product.
 
 ## Handing off a part
 
-Steps 3 and 5 may run as parallel sub-agents for a major launch, each
-briefed with its step, the positioning, the audiences and the dates.
-Write the launch-day sequence yourself from what returns, since it
-depends on both.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

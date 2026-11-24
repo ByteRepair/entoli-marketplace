@@ -71,7 +71,5 @@ adjectives.
 
 ## Handing off a part
 
-With many styles, the product pages and size guides may split across
-sub-agents by style, each briefed with steps 1 to 3, the voice sample
-and its styles' facts. Write the email and captions yourself from the
-returned pages, so the drop reads as one.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

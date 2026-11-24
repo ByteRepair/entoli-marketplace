@@ -82,7 +82,5 @@ Plain sentences, no promotional wording about the course.
 
 ## Handing off a part
 
-The steps depend on each other, so do them yourself. The one exception:
-when the given readings are too long to hold with the rest, a sub-agent
-may read them and return one line per reading on the topics it covers,
-for step 4.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

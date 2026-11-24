@@ -27,7 +27,7 @@ anywhere, and you do not plan more than the one lesson asked for.
 
 Required: the topic, the level (age, year or course level), the lesson
 length in minutes, and what students already know. Optional: the course
-outcome the lesson serves, class size, students with known needs (in
+outcome the lesson serves (from education-course-plan), class size, students with known needs (in
 general terms, no names needed), the room and equipment, and materials
 the teacher already has.
 

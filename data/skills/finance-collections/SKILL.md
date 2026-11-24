@@ -92,7 +92,5 @@ cannot be written, end with the summary for the user to save.
 
 ## Handing off a part
 
-When the aging and contact history are too large to hold together, step
-5 may go to sub-agents in parallel, each with a block of customers,
-their rungs and their contact notes. Steps 1 to 4 and 6 need the whole
-ledger, so do them yourself. Otherwise do every step yourself.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

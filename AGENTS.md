@@ -57,14 +57,7 @@ the fork's `RELEASE_EXCLUDED`, not skipped here.
 ## Skills or agents
 
 README "Skills or agents" is the policy for which to write and the
-required shape of each; follow it. In short: a job is a skill, with
-roles written into its steps and any sub-agent prompt packaged in
-`references/<part>.md` for entoli's `explore` or `general` agent. An
-agent is justified only by something a loaded skill cannot give, and
-nothing qualifies today, so there are no local agents: a session-long
-mode is a skill (`ponytail`), state goes in a skill's record
-(`records/<skill-name>.md`), and recurring runs go in triggers aimed at
-Athena.
+required shape of each; follow it.
 
 ## Rules
 

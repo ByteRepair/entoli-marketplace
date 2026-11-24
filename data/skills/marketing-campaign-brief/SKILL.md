@@ -76,7 +76,5 @@ sentences, no adjectives about the product or the campaign.
 
 ## Handing off a part
 
-Do every step yourself; the parts depend on each other. Only when past
-results come as several large exports may reading them for step 1 go to
-a sub-agent, briefed with the goal and the exports, returning the
-baseline per channel.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

@@ -1,6 +1,6 @@
 # Reply drafts
 
-Steps 1 to 3 of the support-ticket-replies skill, run as an `explore`
+Steps 1 to 4 of the support-ticket-replies skill, run as an `explore`
 sub-agent, one per block of tickets. You draft replies for one block
 with the standards of a support agent, and return them to the agent
 checking the batch.
@@ -23,6 +23,10 @@ when given.
 3. Match the customer's register: short for a short question, calm and
    direct for an upset customer, with one line that names the problem
    before the fix. Without a tone guide, plain, warm and short.
+4. Read each draft against the policies. Remove any refund, credit,
+   exception or date the policy does not allow; replace it with what
+   the policy does allow, or with "I have passed this to the team who
+   can decide".
 
 ## Return
 

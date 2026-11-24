@@ -35,6 +35,10 @@ you could not search for, and why.
   files, its title or a distinctive term from it into a search.
 - Never search in a way that could reveal or guess the authors, and
   never name or guess them in your answer.
-- Never fill a field from memory; copy fields verbatim.
+- Never fill a field from memory; a field the record lacks stays
+  empty.
+- Copy fields verbatim: no reformatting of names, titles or venues.
+- One record per paper; when several could match, list them and mark
+  the reference "unverified".
 - Never suggest a paper for its author's sake, only for a claim.
 - Never state a paper's result beyond what its page or abstract says.

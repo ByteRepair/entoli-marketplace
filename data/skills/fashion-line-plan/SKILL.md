@@ -77,7 +77,5 @@ line sheet needs the user's exact prices.
 
 ## Handing off a part
 
-When sell-through comes as several large exports, step 1 may go to a
-sub-agent per export, briefed with the step and that export, returning
-the per-category read. Do steps 2 to 4 yourself, since each depends on
-the one before.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

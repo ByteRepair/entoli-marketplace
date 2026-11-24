@@ -78,7 +78,5 @@ Plain words, no product adjectives.
 
 ## Handing off a part
 
-Do every step yourself: one article from one fix holds in one context.
-If the resolved tickets are too many to read with the rest, step 1 may
-go to a sub-agent with the tickets only, to return the exact error
-texts and symptom phrases.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

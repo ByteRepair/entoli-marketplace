@@ -69,9 +69,10 @@ after applying with no reply, and 3 working days after an interview.
 ## Output
 
 In this order: what changed since the last run, one line each; due in
-the next 7 days, as a table (company, role, step, date); the tracker as
-a table (company, role, stage, fit call, next step, date); dates to
-confirm; data still needed. Plain words, no encouragement filler.
+the next 7 days, as a table (company, role, step, date); dates to
+confirm; data still needed. Show the whole tracker (company, role,
+stage, fit call, next step, date) only on the first run or when asked.
+Plain words, no encouragement filler.
 
 After answering, replace `records/job-application-tracker.md` in the
 project workspace with the full tracker table and today's date. Where

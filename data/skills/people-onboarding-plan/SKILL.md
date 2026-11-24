@@ -76,6 +76,5 @@ read it too.
 
 ## Handing off a part
 
-This job is usually small enough for one pass; do every step yourself.
-When many new hires start together, one plan per hire may run as a
-parallel sub-agent, each briefed with that hire's inputs.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

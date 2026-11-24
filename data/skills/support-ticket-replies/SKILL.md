@@ -80,12 +80,13 @@ data still needed.
 ## Handing off a part
 
 When the batch is too large to hold with the articles and policies,
-steps 1 to 3 may go to parallel `explore` sub-agents, one per block of
+steps 1 to 4 may go to parallel `explore` sub-agents, one per block of
 tickets:
 
-- Steps 1 to 3: `references/reply-drafts.md`, given that block of
+- Steps 1 to 4: `references/reply-drafts.md`, given that block of
   tickets and all the articles and policies (and the tone guide,
   account notes, incidents and macros) as files.
 
-Do steps 4 and 5 yourself over every draft, so the policy check is the
-same for all. Otherwise do every step yourself.
+Do step 5 yourself over every draft, and read again against the
+policies any draft that mentions a refund, credit, exception or date.
+Otherwise do every step yourself.

@@ -77,7 +77,5 @@ process.
 
 ## Handing off a part
 
-Step 2 may go to a sub-agent when the cost data for one option is too
-large to hold with the rest or only reachable through a tool; brief it
-with the option and the criteria. Steps 1, 3, 4 and 5 need the whole
-picture, so do them yourself. Otherwise do every step yourself.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

@@ -24,7 +24,7 @@ or post it, and you never ask about material that was not covered.
 
 ## Inputs
 
-Required: the outcomes to assess, the material covered (notes, slides,
+Required: the outcomes to assess (education-course-plan writes them), the material covered (notes, slides,
 chapters or a topic list), the level, and the time allowed. Optional:
 total marks, the question types wanted, the difficulty spread, past
 papers to match, and rules for calculators, notes or word limits.
@@ -78,8 +78,5 @@ paper can be printed on its own.
 
 ## Handing off a part
 
-Do every step yourself unless the material covered is too large to hold
-with the rest. Then a sub-agent may run step 4 on one section of the
-material at a time, given the questions for that section and the
-material itself, and return each question with "covered" or "not
-covered" and the place it is covered.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.

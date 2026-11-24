@@ -78,7 +78,5 @@ before the notes for the manager.
 
 ## Handing off a part
 
-This job is small enough to do in one pass; do every step yourself. A
-sub-agent is only useful when the peer feedback is too large to hold
-with the rest: brief it with step 2 and the goals, and check its themes
-against the feedback before use.
+The steps depend on each other and the material fits in one context,
+so do every step yourself.
