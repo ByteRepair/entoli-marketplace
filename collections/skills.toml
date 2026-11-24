@@ -24,3 +24,115 @@ members = [
 name = "Writing"
 summary = "Status reports, newsletters and other internal updates, and a second look at advice."
 members = ["discernment-nudge", "internal-comms"]
+
+[business]
+name = "Business"
+summary = "Renewals, competitive briefs, decision memos, deal follow-ups and pipeline reviews."
+members = [
+  "business-competitive-brief",
+  "business-deal-followup",
+  "business-decision-memo",
+  "business-pipeline-review",
+  "business-renewal-prep",
+]
+
+[people]
+name = "People ops"
+summary = "Interview loops, job postings, onboarding plans, performance reviews and survey readouts."
+members = [
+  "people-interview-loop",
+  "people-job-posting",
+  "people-onboarding-plan",
+  "people-performance-review",
+  "people-survey-readout",
+]
+
+[accounting]
+name = "Accounting"
+summary = "Payables runs, collections, reconciliations, month-end close and 13-week cash forecasts."
+members = [
+  "finance-cash-forecast",
+  "finance-collections",
+  "finance-month-end-close",
+  "finance-payables-run",
+  "finance-reconciliation",
+]
+
+[support]
+name = "Customer support"
+summary = "Ticket replies, help-center articles, escalations, weekly trends and macro audits."
+members = [
+  "support-escalation",
+  "support-kb-article",
+  "support-macro-audit",
+  "support-ticket-replies",
+  "support-weekly-trends",
+]
+
+[fashion]
+name = "Fashion"
+summary = "Trend briefs, line plans, tech packs and fit sessions, line sheets and product copy."
+members = [
+  "fashion-line-plan",
+  "fashion-line-sheet",
+  "fashion-product-copy",
+  "fashion-tech-pack",
+  "fashion-trend-brief",
+]
+
+[marketing]
+name = "Marketing"
+summary = "Campaign briefs, content calendars, launch plans, SEO briefs and performance readouts."
+members = [
+  "marketing-campaign-brief",
+  "marketing-content-calendar",
+  "marketing-launch-plan",
+  "marketing-performance-readout",
+  "marketing-seo-brief",
+]
+
+[software]
+name = "Software"
+summary = "Ponytail coding mode, bug triage, postmortems, design reviews, dependency upgrades and release notes."
+members = [
+  "ponytail",
+  "software-bug-triage",
+  "software-dependency-upgrade",
+  "software-design-review",
+  "software-incident-postmortem",
+  "software-release-notes",
+]
+
+[research]
+name = "Research"
+summary = "Literature reviews, pre-submission paper checks, peer reviews, rebuttals and grant proposals."
+members = [
+  "research-grant-proposal",
+  "research-literature-review",
+  "research-paper-check",
+  "research-peer-review",
+  "research-rebuttal",
+]
+
+[education]
+name = "Education"
+summary = "Course plans, lesson plans, assessments, student feedback and study guides."
+members = [
+  "education-assessment",
+  "education-course-plan",
+  "education-lesson-plan",
+  "education-student-feedback",
+  "education-study-guide",
+]
+
+[job-seeking]
+name = "Job seeking"
+summary = "Fit checks, tailored resumes, cover letters, interview prep, offer negotiation and application tracking."
+members = [
+  "job-application-tracker",
+  "job-cover-letter",
+  "job-fit-check",
+  "job-interview-prep",
+  "job-offer-negotiation",
+  "job-resume-tailor",
+]

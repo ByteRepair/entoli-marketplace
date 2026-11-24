@@ -1,5 +1,5 @@
 repo = "himself65/finance-skills"
 ref = "main"
 path = "plugins"
-name = "Finance"
-summary = "Bookkeeping, forecasting, month-end close and accounts workflows."
+name = "Markets"
+summary = "Stock and market data, company valuation, earnings research and options."

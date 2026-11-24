@@ -54,22 +54,17 @@ the fork's `RELEASE_EXCLUDED`, not skipped here.
   entry added to a section belongs in a collection unless it is one of a
   kind. See README "Collections".
 
-## Agent prompt structure
+## Skills or agents
 
-Every `PROMPT.md` body follows the house shape:
-
-- **Introduction** (unheaded opening): who the agent is — the employee
-  type and company it models — what it turns into what, and its scope
-  line (it works from material the user provides, and names the action
-  it never takes).
-- **`## Workflow`**: numbered gather → process → produce steps,
-  including the defaults used when the launching message is bare and
-  the ask-don't-invent rule.
-- **`## Expectations`**: the output shapes and section order, style
-  rules, the domain's hard scope limits, and the flag-the-gaps rule.
-
-Skills (`SKILL.md`) have no house structure; this standard is for
-agents.
+README "Skills or agents" is the policy for which to write and the
+required shape of each; follow it. In short: a job is a skill, with
+roles written into its steps and any sub-agent prompt packaged in
+`references/<part>.md` for entoli's `explore` or `general` agent. An
+agent is justified only by something a loaded skill cannot give, and
+nothing qualifies today, so there are no local agents: a session-long
+mode is a skill (`ponytail`), state goes in a skill's record
+(`records/<skill-name>.md`), and recurring runs go in triggers aimed at
+Athena.
 
 ## Rules
 
